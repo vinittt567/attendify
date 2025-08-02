@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from "@/components/ui/button";
-import { PlusCircle, BookOpen, LogOut, CalendarDays } from "lucide-react";
+import { PlusCircle, BookOpen, LogOut, CalendarDays, LayoutDashboard } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/context/auth-provider";
 
 type HeaderProps = {
@@ -22,6 +22,7 @@ type HeaderProps = {
 
 export function Header({ onAddSubject }: HeaderProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const { user } = useAuth();
 
   const handleLogout = async () => {
@@ -33,6 +34,8 @@ export function Header({ onAddSubject }: HeaderProps) {
     }
   };
   
+  const isTimetablePage = pathname === '/dashboard/timetable';
+
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-sm sm:px-6">
       <div className="flex items-center gap-3">
@@ -42,17 +45,33 @@ export function Header({ onAddSubject }: HeaderProps) {
         </h1>
       </div>
       <div className="flex items-center gap-4">
-        <Button variant="outline" onClick={() => router.push('/dashboard/timetable')} className="hidden sm:flex">
-          <CalendarDays className="mr-2 h-4 w-4" />
-          Timetable
-        </Button>
+        {isTimetablePage ? (
+          <>
+            <Button variant="outline" onClick={() => router.push('/dashboard')} className="hidden sm:flex">
+              <LayoutDashboard className="mr-2 h-4 w-4" />
+              Dashboard
+            </Button>
+            <Button variant="outline" size="icon" onClick={() => router.push('/dashboard')} className="flex sm:hidden">
+              <LayoutDashboard className="h-4 w-4" />
+              <span className="sr-only">Dashboard</span>
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button variant="outline" onClick={() => router.push('/dashboard/timetable')} className="hidden sm:flex">
+              <CalendarDays className="mr-2 h-4 w-4" />
+              Timetable
+            </Button>
+             <Button variant="outline" size="icon" onClick={() => router.push('/dashboard/timetable')} className="flex sm:hidden">
+              <CalendarDays className="h-4 w-4" />
+               <span className="sr-only">Timetable</span>
+            </Button>
+          </>
+        )}
+        
         <Button onClick={onAddSubject} className="hidden sm:flex">
           <PlusCircle className="mr-2 h-4 w-4" />
           Add Subject
-        </Button>
-         <Button variant="outline" size="icon" onClick={() => router.push('/dashboard/timetable')} className="flex sm:hidden">
-          <CalendarDays className="h-4 w-4" />
-           <span className="sr-only">Timetable</span>
         </Button>
         <Button onClick={onAddSubject} size="icon" className="flex sm:hidden">
           <PlusCircle className="h-4 w-4" />
