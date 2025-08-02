@@ -13,6 +13,16 @@ import { format, isSameDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // Mock Data
 const MOCK_SUBJECTS: Subject[] = [
@@ -39,6 +49,8 @@ export default function Dashboard() {
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [isAddSubjectDialogOpen, setIsAddSubjectDialogOpen] = useState(false);
   const [isMarkerDialogOpen, setIsMarkerDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [subjectToDelete, setSubjectToDelete] = useState<Subject | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const { toast } = useToast();
 
@@ -71,6 +83,28 @@ export default function Dashboard() {
       description: `Attendance for ${format(new Date(records[0].date), 'MMMM d, yyyy')} has been updated.`,
     });
   };
+
+  const openDeleteDialog = (subjectId: string) => {
+    const subject = subjects.find(s => s.id === subjectId);
+    if (subject) {
+      setSubjectToDelete(subject);
+      setIsDeleteDialogOpen(true);
+    }
+  };
+
+  const confirmDeleteSubject = () => {
+    if (subjectToDelete) {
+      setSubjects(prev => prev.filter(s => s.id !== subjectToDelete.id));
+      setAttendance(prev => prev.filter(a => a.subjectId !== subjectToDelete.id));
+      toast({
+        title: "Subject Deleted",
+        description: `${subjectToDelete.name} and its attendance records have been removed.`,
+        variant: 'destructive',
+      });
+    }
+    setSubjectToDelete(null);
+    setIsDeleteDialogOpen(false);
+  };
   
   const attendanceForSelectedDay = useMemo(() => {
     if (!selectedDate) return [];
@@ -102,7 +136,11 @@ export default function Dashboard() {
                     exit={{ opacity: 0, y: -20, scale: 0.95 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <SubjectCard subject={subject} attendance={attendance} />
+                    <SubjectCard 
+                      subject={subject} 
+                      attendance={attendance}
+                      onDelete={openDeleteDialog}
+                    />
                   </motion.div>
                 ))}
               </AnimatePresence>
@@ -155,6 +193,21 @@ export default function Dashboard() {
         attendanceForDay={attendanceForSelectedDay}
         onSave={handleSaveAttendance}
       />
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the subject "{subjectToDelete?.name}" and all its associated attendance records. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setIsDeleteDialogOpen(false)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteSubject}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

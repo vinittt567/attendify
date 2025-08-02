@@ -6,18 +6,19 @@ import { getAttendanceSummaryAction } from '@/lib/actions';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Wand2, BrainCircuit, RotateCw } from 'lucide-react';
+import { Wand2, BrainCircuit, RotateCw, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { subDays, startOfMonth, isWithinInterval } from 'date-fns';
 
 type SubjectCardProps = {
   subject: Subject;
   attendance: AttendanceRecord[];
+  onDelete: (subjectId: string) => void;
 };
 
 type FilterType = 'all' | '7days' | 'month';
 
-export function SubjectCard({ subject, attendance }: SubjectCardProps) {
+export function SubjectCard({ subject, attendance, onDelete }: SubjectCardProps) {
   const [summary, setSummary] = useState<AttendanceSummary | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,8 +67,14 @@ export function SubjectCard({ subject, attendance }: SubjectCardProps) {
     <Card className={cn("flex flex-col border-l-4 transition-all hover:shadow-md", `border-${subject.color.replace('bg-', '')}`)}>
       <CardHeader>
         <div className="flex items-start justify-between">
-          <CardTitle className="font-headline text-xl">{subject.name}</CardTitle>
-          {subject.shortCode && <Badge variant="outline">{subject.shortCode}</Badge>}
+          <div>
+            <CardTitle className="font-headline text-xl">{subject.name}</CardTitle>
+            {subject.shortCode && <Badge variant="outline" className="mt-1">{subject.shortCode}</Badge>}
+          </div>
+          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => onDelete(subject.id)}>
+            <Trash2 className="h-4 w-4 text-muted-foreground transition-colors hover:text-destructive" />
+            <span className="sr-only">Delete Subject</span>
+          </Button>
         </div>
         <CardDescription>Attendance Overview</CardDescription>
       </CardHeader>
