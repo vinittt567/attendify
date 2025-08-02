@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useAuth } from '@/context/auth-provider';
 import { db } from '@/lib/firebase';
-import { collection, doc, getDocs, writeBatch, addDoc, deleteDoc, query, where, documentId } from 'firebase/firestore';
+import { collection, doc, getDocs, writeBatch, addDoc, deleteDoc, query, where, documentId, getDoc } from 'firebase/firestore';
 import { initialSubjects, initialTimetable } from '@/lib/mock-data';
 
 const DAYS_OF_WEEK: TimetableEntry['day'][] = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -44,42 +44,50 @@ export default function Dashboard() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const { toast } = useToast();
 
-  const fetchData = useCallback(async () => {
-    if (!user) return;
+  const fetchData = useCallback(async (forceRefetch = false) => {
+    if (!user || (isDataLoaded && !forceRefetch)) return;
     try {
+      const userDocRef = doc(db, `users/${user.uid}`);
+      const userDocSnap = await getDoc(userDocRef);
+
       const subjectsQuery = query(collection(db, `users/${user.uid}/subjects`));
       const timetableQuery = query(collection(db, `users/${user.uid}/timetable`));
       const attendanceQuery = query(collection(db, `users/${user.uid}/attendance`));
+      
+      let subjectsSnapshot = await getDocs(subjectsQuery);
+      let timetableSnapshot = await getDocs(timetableQuery);
+      const attendanceSnapshot = await getDocs(attendanceQuery);
 
-      const [subjectsSnapshot, timetableSnapshot, attendanceSnapshot] = await Promise.all([
-        getDocs(subjectsQuery),
-        getDocs(timetableQuery),
-        getDocs(attendanceQuery),
-      ]);
-      
-      let fetchedSubjects: Subject[] = subjectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Subject));
-      let fetchedTimetable: TimetableEntry[] = timetableSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TimetableEntry));
-      
-      if (fetchedSubjects.length === 0 && fetchedTimetable.length === 0) {
+      if (!userDocSnap.exists() || subjectsSnapshot.empty) {
         const batch = writeBatch(db);
+
+        const newSubjectRefs: {[key: string]: string} = {};
         initialSubjects.forEach(subject => {
           const docRef = doc(collection(db, `users/${user.uid}/subjects`));
-          batch.set(docRef, {name: subject.name, shortCode: subject.shortCode, color: subject.color});
+          newSubjectRefs[subject.id] = docRef.id;
+          const {id, ...rest} = subject;
+          batch.set(docRef, rest);
         });
+
         initialTimetable.forEach(entry => {
            const docRef = doc(collection(db, `users/${user.uid}/timetable`));
-           batch.set(docRef, {subjectId: entry.subjectId, day: entry.day, startTime: entry.startTime, endTime: entry.endTime});
+           const newSubjectId = newSubjectRefs[entry.subjectId];
+           if (newSubjectId) {
+             batch.set(docRef, { ...entry, subjectId: newSubjectId });
+           }
         });
-        await batch.commit();
         
-        const newSubjectsSnapshot = await getDocs(subjectsQuery);
-        fetchedSubjects = newSubjectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Subject));
-        const newTimetableSnapshot = await getDocs(timetableQuery);
-        fetchedTimetable = newTimetableSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TimetableEntry));
-      }
+        // Mark that the user has been seeded
+        batch.set(userDocRef, { seeded: true }, { merge: true });
 
-      setSubjects(fetchedSubjects);
-      setTimetable(fetchedTimetable);
+        await batch.commit();
+
+        subjectsSnapshot = await getDocs(subjectsQuery);
+        timetableSnapshot = await getDocs(timetableQuery);
+      }
+      
+      setSubjects(subjectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Subject)));
+      setTimetable(timetableSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TimetableEntry)));
       setAttendance(attendanceSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendanceRecord)));
       
     } catch (error) {
@@ -88,7 +96,7 @@ export default function Dashboard() {
     } finally {
         setIsDataLoaded(true);
     }
-  }, [user, toast]);
+  }, [user, toast, isDataLoaded]);
   
   useEffect(() => {
     if(user && !isDataLoaded) {
@@ -133,7 +141,7 @@ export default function Dashboard() {
       });
       await batch.commit();
       
-      await fetchData(); // Refetch to get the latest state
+      await fetchData(true); // Refetch to get the latest state
 
       toast({
         title: "Attendance Saved",
@@ -343,3 +351,5 @@ export default function Dashboard() {
     </div>
   );
 }
+
+    
