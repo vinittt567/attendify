@@ -1,7 +1,10 @@
-import Link from 'next/link';
+'use client';
+
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { BookOpen } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 const GoogleIcon = () => (
     <svg className="size-5" viewBox="0 0 48 48" aria-hidden="true">
@@ -16,6 +19,19 @@ const GoogleIcon = () => (
 
 
 export default function LoginPage() {
+  const router = useRouter();
+  const { toast } = useToast();
+
+  const handleSignIn = () => {
+    // In a real app, you'd have your authentication logic here.
+    // For now, we'll just navigate to the dashboard.
+    toast({
+      title: "Signed In Successfully",
+      description: "Welcome back!",
+    });
+    router.push('/dashboard');
+  };
+
   return (
     <main className="flex min-h-screen w-full flex-col items-center justify-center bg-muted/30 p-4 font-body">
       <div className="w-full max-w-md">
@@ -30,11 +46,9 @@ export default function LoginPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="p-8 pt-0">
-            <Button asChild className="w-full h-14 text-lg font-semibold transform hover:scale-105 transition-transform duration-200">
-              <Link href="/dashboard">
+            <Button onClick={handleSignIn} className="w-full h-14 text-lg font-semibold transform hover:scale-105 transition-transform duration-200">
                 <GoogleIcon />
                 Sign in with Google
-              </Link>
             </Button>
           </CardContent>
         </Card>
