@@ -66,15 +66,29 @@ export default function LoginPage() {
         <h3 className="text-[#0e141b] tracking-light text-2xl font-bold leading-tight px-4 text-center pb-2 pt-5">
           Welcome to Attendance Tracker
         </h3>
-        <div className="@container">
-          <div className="@[480px]:px-4 @[480px]:py-3">
-            <div
-              className="w-full bg-center bg-no-repeat bg-cover flex flex-col justify-end overflow-hidden bg-slate-50 @[480px]:rounded-xl min-h-80"
-              style={{
-                backgroundImage: `url("https://placehold.co/600x400.png")`
-              }}
-              data-ai-hint="students classroom"
-            ></div>
+        <div className="px-8 py-10">
+          <div className="space-y-8">
+            <div className="flex items-start gap-4">
+              <div className="text-3xl">📚</div>
+              <div>
+                <h4 className="font-bold text-lg text-slate-800">Create Subjects</h4>
+                <p className="text-slate-600 mt-1">Easily create and manage your subjects with custom names and color tags.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-4">
+              <div className="text-3xl">🗓️</div>
+              <div>
+                <h4 className="font-bold text-lg text-slate-800">Mark Daily Attendance</h4>
+                <p className="text-slate-600 mt-1">Quickly mark your attendance every day using an intuitive calendar view.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-4">
+              <div className="text-3xl">📊</div>
+              <div>
+                <h4 className="font-bold text-lg text-slate-800">View Attendance Stats</h4>
+                <p className="text-slate-600 mt-1">Get insightful AI-powered summaries and statistics for each of your subjects.</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
