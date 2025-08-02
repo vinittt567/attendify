@@ -37,13 +37,12 @@ export default function LoginPage() {
       await signInWithPopup(auth, provider);
       // The onAuthStateChanged listener will handle the redirect
     } catch (error: any) {
-      console.error("Authentication error:", error);
-      
-      // Avoid showing a toast if the user closes the popup
+      // Avoid showing a toast or logging an error if the user closes the popup
       if (error.code === 'auth/popup-closed-by-user') {
         return;
       }
-
+      
+      console.error("Authentication error:", error);
       toast({
         title: "Uh Oh! Something went wrong.",
         description: "There was a problem with your request.",
