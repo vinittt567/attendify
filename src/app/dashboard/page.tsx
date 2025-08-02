@@ -8,7 +8,7 @@ import { Header } from '@/components/dashboard/header';
 import { AddSubjectDialog } from '@/components/dashboard/add-subject-dialog';
 import { SubjectCard } from '@/components/dashboard/subject-card';
 import { Calendar } from '@/components/ui/calendar';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { AttendanceMarkerDialog } from '@/components/dashboard/attendance-marker-dialog';
 import { format, getDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -26,7 +26,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useAuth } from '@/context/auth-provider';
 import { db } from '@/lib/firebase';
-import { collection, doc, getDocs, writeBatch, addDoc, deleteDoc, query, where } from 'firebase/firestore';
+import { collection, doc, getDocs, writeBatch, addDoc, deleteDoc, query, where, setDoc } from 'firebase/firestore';
+import { initialSubjects, initialTimetable } from '@/lib/mock-data';
 
 const DAYS_OF_WEEK: TimetableEntry['day'][] = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -45,18 +46,52 @@ export default function Dashboard() {
 
   const fetchData = useCallback(async (uid: string) => {
     try {
-      const [subjectsSnapshot, timetableSnapshot, attendanceSnapshot] = await Promise.all([
-        getDocs(query(collection(db, `users/${uid}/subjects`))),
-        getDocs(query(collection(db, `users/${uid}/timetable`))),
-        getDocs(query(collection(db, `users/${uid}/attendance`)))
-      ]);
+      const subjectsCollection = collection(db, `users/${uid}/subjects`);
+      const subjectsSnapshot = await getDocs(subjectsCollection);
+      
+      let fetchedSubjects: Subject[];
 
-      setSubjects(subjectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Subject)));
-      setTimetable(timetableSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TimetableEntry)));
+      if (subjectsSnapshot.empty) {
+        // If no subjects, this is likely a new user. Seed the data.
+        const batch = writeBatch(db);
+        
+        initialSubjects.forEach(subject => {
+            const docRef = doc(db, `users/${uid}/subjects`, subject.id);
+            batch.set(docRef, subject);
+        });
+        
+        initialTimetable.forEach(entry => {
+            const docRef = doc(db, `users/${uid}/timetable`, entry.id);
+            batch.set(docRef, entry);
+        });
+        
+        await batch.commit();
+        
+        // Refetch after seeding
+        const newSubjectsSnapshot = await getDocs(subjectsCollection);
+        fetchedSubjects = newSubjectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Subject));
+        
+        const timetableSnapshot = await getDocs(collection(db, `users/${uid}/timetable`));
+        setTimetable(timetableSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TimetableEntry)));
+
+      } else {
+        fetchedSubjects = subjectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Subject));
+        const timetableSnapshot = await getDocs(collection(db, `users/${uid}/timetable`));
+        setTimetable(timetableSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TimetableEntry)));
+      }
+      
+      setSubjects(fetchedSubjects);
+      
+      const attendanceSnapshot = await getDocs(query(collection(db, `users/${uid}/attendance`)));
       setAttendance(attendanceSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendanceRecord)));
+
     } catch (error) {
       console.error("Error fetching data:", error);
-      toast({ title: "Error", description: "Could not fetch your data. Please ensure you have created a Firestore database in your Firebase project.", variant: 'destructive', duration: 10000 });
+      if (error instanceof Error && 'code' in error && (error as any).code === 'failed-precondition') {
+         toast({ title: "Enable Firestore", description: "Please create a Firestore database in your Firebase project console to continue.", variant: 'destructive', duration: 10000 });
+      } else {
+         toast({ title: "Error", description: "Could not fetch your data. Please try again later.", variant: 'destructive', duration: 10000 });
+      }
     } finally {
       setIsDataLoaded(true);
     }
@@ -72,11 +107,12 @@ export default function Dashboard() {
   const handleAddSubject = async (values: SubjectFormValues) => {
     if (!user) return;
     try {
-      const docRef = await addDoc(collection(db, `users/${user.uid}/subjects`), values);
+      const newSubjectRef = doc(collection(db, `users/${user.uid}/subjects`));
       const newSubject: Subject = {
-        id: docRef.id,
+        id: newSubjectRef.id,
         ...values,
       };
+      await setDoc(newSubjectRef, values);
       setSubjects(prev => [...prev, newSubject]);
       setIsAddSubjectDialogOpen(false);
       toast({
@@ -185,6 +221,14 @@ export default function Dashboard() {
     const uniqueDates = new Set(attendance.map(a => a.date));
     return Array.from(uniqueDates).map(dateStr => new Date(dateStr + 'T00:00:00'));
   }, [attendance]);
+  
+  const overallStats = useMemo(() => {
+    const totalLectures = attendance.filter(a => a.status === 'Present' || a.status === 'Absent').length;
+    const attendedLectures = attendance.filter(a => a.status === 'Present').length;
+    const percentage = totalLectures > 0 ? (attendedLectures / totalLectures) * 100 : 0;
+    return { totalLectures, attendedLectures, percentage };
+  }, [attendance]);
+
 
   const handleDateSelect = (date: Date | undefined) => {
     setSelectedDate(date);
@@ -214,7 +258,7 @@ export default function Dashboard() {
     setIsMarkerDialogOpen(true);
   }
   
-  if (authLoading || !isDataLoaded) {
+  if (authLoading || (!isDataLoaded && !user)) {
     return <div className="flex items-center justify-center h-screen">Loading your personalized dashboard...</div>
   }
 
@@ -255,7 +299,7 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         </div>
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 space-y-6">
           <Card className="flex h-full flex-col">
             <CardHeader>
               <CardTitle className="font-headline text-2xl">Attendance Calendar</CardTitle>
@@ -280,6 +324,28 @@ export default function Dashboard() {
              <div className="p-4 pt-0 text-center">
                 <Badge variant="secondary">Select a date to mark attendance</Badge>
             </div>
+          </Card>
+          <Card>
+            <CardHeader>
+                <CardTitle className="font-headline text-xl">Overall Statistics</CardTitle>
+                <CardDescription>Your attendance at a glance.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="flex justify-around text-center">
+                    <div>
+                        <p className="text-3xl font-bold">{overallStats.totalLectures}</p>
+                        <p className="text-sm text-muted-foreground">Total Lectures</p>
+                    </div>
+                    <div>
+                        <p className="text-3xl font-bold text-green-600">{overallStats.attendedLectures}</p>
+                        <p className="text-sm text-muted-foreground">Attended</p>
+                    </div>
+                    <div>
+                        <p className="text-3xl font-bold text-primary">{overallStats.percentage.toFixed(0)}%</p>
+                        <p className="text-sm text-muted-foreground">Percentage</p>
+                    </div>
+                </div>
+            </CardContent>
           </Card>
         </div>
       </main>
