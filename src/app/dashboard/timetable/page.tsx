@@ -79,7 +79,7 @@ export default function TimetablePage() {
         id: docRef.id,
         ...values,
       };
-      setTimetable(prev => [...prev, newEntry].sort((a,b) => a.startTime.localeCompare(b.startTime)));
+      setTimetable(prev => [...prev, newEntry].sort((a,b) => (a.startTime ?? '').localeCompare(b.startTime ?? '')));
       setIsAddEntryDialogOpen(false);
       toast({
         title: "Timetable Updated",
@@ -145,7 +145,7 @@ export default function TimetablePage() {
                         <CardContent className="space-y-3 flex-grow">
                             {timetable
                                 .filter(entry => entry.day === day)
-                                .sort((a,b) => a.startTime.localeCompare(b.startTime))
+                                .sort((a,b) => (a.startTime ?? '').localeCompare(b.startTime ?? ''))
                                 .map(entry => {
                                     const subject = getSubjectById(entry.subjectId);
                                     return (
@@ -154,7 +154,9 @@ export default function TimetablePage() {
                                                 <div className={cn("h-2 w-2 rounded-full", subject?.color ?? 'bg-gray-400')}></div>
                                                 <p className="font-semibold">{subject?.name ?? 'Unknown Subject'}</p>
                                             </div>
-                                            <p className="text-xs text-muted-foreground ml-4">{entry.startTime} - {entry.endTime}</p>
+                                            {entry.startTime && entry.endTime && (
+                                              <p className="text-xs text-muted-foreground ml-4">{entry.startTime} - {entry.endTime}</p>
+                                            )}
                                             <Button 
                                                 variant="ghost" 
                                                 size="icon" 

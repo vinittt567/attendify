@@ -22,9 +22,14 @@ const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
 const timetableSchema = z.object({
   subjectId: z.string().nonempty('Please select a subject.'),
   day: z.enum(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']),
-  startTime: z.string().regex(timeRegex, 'Invalid time format. Use HH:mm.'),
-  endTime: z.string().regex(timeRegex, 'Invalid time format. Use HH:mm.'),
-}).refine(data => data.endTime > data.startTime, {
+  startTime: z.string().regex(timeRegex, 'Invalid time format. Use HH:mm.').optional().or(z.literal('')),
+  endTime: z.string().regex(timeRegex, 'Invalid time format. Use HH:mm.').optional().or(z.literal('')),
+}).refine(data => {
+    if (data.startTime && data.endTime) {
+        return data.endTime > data.startTime;
+    }
+    return true;
+}, {
   message: 'End time must be after start time.',
   path: ['endTime'],
 });
@@ -52,8 +57,13 @@ export function AddTimetableEntryDialog({ isOpen, onOpenChange, onSubmit, subjec
   });
 
   const handleFormSubmit = (values: z.infer<typeof timetableSchema>) => {
-    onSubmit(values);
-    form.reset({day: 'Monday', startTime: '', endTime: ''});
+    const dataToSubmit: TimetableFormValues = {
+      ...values,
+      startTime: values.startTime || '',
+      endTime: values.endTime || '',
+    };
+    onSubmit(dataToSubmit);
+    form.reset({subjectId: '', day: 'Monday', startTime: '', endTime: ''});
   };
   
   return (
@@ -115,7 +125,7 @@ export function AddTimetableEntryDialog({ isOpen, onOpenChange, onSubmit, subjec
                 name="startTime"
                 render={({ field }) => (
                     <FormItem>
-                    <FormLabel>Start Time</FormLabel>
+                    <FormLabel>Start Time (Optional)</FormLabel>
                     <FormControl>
                         <Input type="time" {...field} />
                     </FormControl>
@@ -128,7 +138,7 @@ export function AddTimetableEntryDialog({ isOpen, onOpenChange, onSubmit, subjec
                 name="endTime"
                 render={({ field }) => (
                     <FormItem>
-                    <FormLabel>End Time</FormLabel>
+                    <FormLabel>End Time (Optional)</FormLabel>
                     <FormControl>
                         <Input type="time" {...field} />
                     </FormControl>

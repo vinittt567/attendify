@@ -21,6 +21,6 @@ export type TimetableEntry = {
   id: string;
   subjectId: string;
   day: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday';
-  startTime: string; // HH:mm
-  endTime: string; // HH:mm
+  startTime?: string; // HH:mm
+  endTime?: string; // HH:mm
 };
