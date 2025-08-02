@@ -15,7 +15,7 @@ const DAYS_OF_WEEK: TimetableEntry['day'][] = ['Monday', 'Tuesday', 'Wednesday',
 
 const initialSubjects: Subject[] = [
     { id: '1', name: 'Computer Networks', shortCode: 'CN', color: 'bg-red-500' },
-    { id: '2', name: 'Wireless Communication', shortCode: 'WC', color: 'bg-blue-500' },
+    { id: '2', name: 'Web Computing', shortCode: 'WC', color: 'bg-blue-500' },
     { id: '3', name: 'Artificial Intelligence', shortCode: 'AI', color: 'bg-green-500' },
     { id: '4', name: 'AI in Data Science', shortCode: 'SAIDS', color: 'bg-yellow-500' },
     { id: '5', name: 'Prof. & Career Enhancement', shortCode: 'PCE', color: 'bg-purple-500' },
