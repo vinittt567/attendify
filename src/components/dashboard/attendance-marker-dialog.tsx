@@ -28,7 +28,7 @@ type AttendanceMarkerDialogProps = {
 };
 
 type LocalAttendance = {
-  [subjectId: string]: 'Present' | 'Absent';
+  [subjectId: string]: 'Present' | 'Absent' | 'No Class';
 };
 
 export function AttendanceMarkerDialog({
@@ -86,10 +86,10 @@ export function AttendanceMarkerDialog({
                   <RadioGroup
                     id={`status-${subject.id}`}
                     value={localAttendance[subject.id]}
-                    onValueChange={(value: 'Present' | 'Absent') =>
+                    onValueChange={(value: 'Present' | 'Absent' | 'No Class') =>
                       setLocalAttendance(prev => ({ ...prev, [subject.id]: value }))
                     }
-                    className="flex"
+                    className="flex gap-2"
                   >
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="Present" id={`present-${subject.id}`} />
@@ -98,6 +98,10 @@ export function AttendanceMarkerDialog({
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="Absent" id={`absent-${subject.id}`} />
                       <Label htmlFor={`absent-${subject.id}`}>Absent</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="No Class" id={`noclass-${subject.id}`} />
+                      <Label htmlFor={`noclass-${subject.id}`}>No Class</Label>
                     </div>
                   </RadioGroup>
                 </div>

@@ -36,10 +36,12 @@ const MOCK_ATTENDANCE: AttendanceRecord[] = Array.from({ length: 30 }).flatMap((
   MOCK_SUBJECTS.map(subject => {
     const date = new Date();
     date.setDate(date.getDate() - dayIndex);
+    const random = Math.random();
+    const status = random > 0.3 ? 'Present' : random > 0.1 ? 'Absent' : 'No Class';
     return {
       date: format(date, 'yyyy-MM-dd'),
       subjectId: subject.id,
-      status: Math.random() > 0.2 ? 'Present' : 'Absent',
+      status: status,
     } as AttendanceRecord
   })
 );

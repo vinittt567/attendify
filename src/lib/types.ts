@@ -8,7 +8,7 @@ export type Subject = {
 export type AttendanceRecord = {
   date: string; // YYYY-MM-DD
   subjectId: string;
-  status: 'Present' | 'Absent';
+  status: 'Present' | 'Absent' | 'No Class';
 };
 
 export type AttendanceSummary = {

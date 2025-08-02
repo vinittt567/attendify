@@ -38,7 +38,7 @@ export function SubjectCard({ subject, attendance, onDelete }: SubjectCardProps)
   }, [attendance, filter]);
 
   const stats = useMemo(() => {
-    const subjectAttendance = filteredAttendance.filter((a) => a.subjectId === subject.id);
+    const subjectAttendance = filteredAttendance.filter(a => a.subjectId === subject.id && a.status !== 'No Class');
     const daysPresent = subjectAttendance.filter((a) => a.status === 'Present').length;
     const totalDays = subjectAttendance.length;
     const percentage = totalDays > 0 ? (daysPresent / totalDays) * 100 : 0;
