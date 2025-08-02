@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { BookOpen } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { auth } from '@/lib/firebase';
+import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 
 const GoogleIcon = () => (
     <svg className="size-5" viewBox="0 0 48 48" aria-hidden="true">
@@ -22,14 +24,24 @@ export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const handleSignIn = () => {
-    // In a real app, you'd have your authentication logic here.
-    // For now, we'll just navigate to the dashboard.
-    toast({
-      title: "Signed In Successfully",
-      description: "Welcome back!",
-    });
-    router.push('/dashboard');
+  const handleSignIn = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      toast({
+        title: "Signed In Successfully",
+        description: `Welcome back, ${user.displayName}!`,
+      });
+      router.push('/dashboard');
+    } catch (error: any) {
+      console.error("Authentication error:", error);
+      toast({
+        title: "Uh Oh! Something went wrong.",
+        description: "There was a problem with your request.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
