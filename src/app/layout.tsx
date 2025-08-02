@@ -1,6 +1,7 @@
 import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
+import { AuthProvider } from '@/context/auth-provider';
 
 export const metadata: Metadata = {
   title: 'Attendify',
@@ -23,8 +24,10 @@ export default function RootLayout({
         <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
       </head>
       <body>
-        {children}
-        <Toaster />
+        <AuthProvider>
+          {children}
+          <Toaster />
+        </AuthProvider>
       </body>
     </html>
   );

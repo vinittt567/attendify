@@ -3,7 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase';
-import { GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { useAuth } from '@/context/auth-provider';
 import { useEffect } from 'react';
 
 const GoogleIcon = () => (
@@ -21,23 +22,21 @@ const GoogleIcon = () => (
 export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { user, loading } = useAuth();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        router.push('/dashboard');
-      }
-    });
-    return () => unsubscribe();
-  }, [router]);
+    if (!loading && user) {
+      router.push('/dashboard');
+    }
+  }, [user, loading, router]);
+
 
   const handleSignIn = async () => {
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
-      // The onAuthStateChanged listener will handle the redirect
+      // The auth provider will handle the redirect
     } catch (error: any) {
-      // Avoid showing a toast or logging an error if the user closes the popup
       if (error.code === 'auth/popup-closed-by-user') {
         return;
       }
@@ -50,6 +49,10 @@ export default function LoginPage() {
       });
     }
   };
+  
+  if (loading || user) {
+    return <div>Loading...</div>; // Or a proper loading spinner
+  }
 
   return (
     <div

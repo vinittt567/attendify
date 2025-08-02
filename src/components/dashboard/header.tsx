@@ -14,6 +14,7 @@ import {
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/auth-provider";
 
 type HeaderProps = {
   onAddSubject: () => void;
@@ -21,6 +22,7 @@ type HeaderProps = {
 
 export function Header({ onAddSubject }: HeaderProps) {
   const router = useRouter();
+  const { user } = useAuth();
 
   const handleLogout = async () => {
     try {
@@ -31,8 +33,6 @@ export function Header({ onAddSubject }: HeaderProps) {
     }
   };
   
-  const user = auth.currentUser;
-
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-sm sm:px-6">
       <div className="flex items-center gap-3">
