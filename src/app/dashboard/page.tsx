@@ -10,7 +10,7 @@ import { SubjectCard } from '@/components/dashboard/subject-card';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AttendanceMarkerDialog } from '@/components/dashboard/attendance-marker-dialog';
-import { format, isSameDay, getDay } from 'date-fns';
+import { format, getDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useAuth } from '@/context/auth-provider';
 import { db } from '@/lib/firebase';
-import { collection, doc, getDocs, writeBatch, addDoc, deleteDoc, query, where, documentId, getDoc, setDoc } from 'firebase/firestore';
+import { collection, doc, getDocs, writeBatch, addDoc, deleteDoc, query, where, getDoc, setDoc } from 'firebase/firestore';
 import { initialSubjects, initialTimetable } from '@/lib/mock-data';
 
 const DAYS_OF_WEEK: TimetableEntry['day'][] = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -44,62 +44,55 @@ export default function Dashboard() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const { toast } = useToast();
 
-  const fetchData = useCallback(async () => {
-    if (!user) return;
-
+  const fetchData = useCallback(async (uid: string) => {
     try {
-      const userDocRef = doc(db, `users/${user.uid}`);
+      const userDocRef = doc(db, `users/${uid}`);
       const userDocSnap = await getDoc(userDocRef);
+      let seeded = userDocSnap.exists() && userDocSnap.data()?.seeded;
 
-      let seeded = false;
-      if (userDocSnap.exists()) {
-          seeded = userDocSnap.data()?.seeded;
-      }
-      
       if (!seeded) {
         const batch = writeBatch(db);
-        const newSubjectRefs: {[key: string]: string} = {};
-        
+        const newSubjectRefs: { [key: string]: string } = {};
+
         initialSubjects.forEach(subject => {
-            const docRef = doc(collection(db, `users/${user.uid}/subjects`));
-            newSubjectRefs[subject.id] = docRef.id;
-            const {id, ...rest} = subject;
-            batch.set(docRef, rest);
+          const docRef = doc(collection(db, `users/${uid}/subjects`));
+          newSubjectRefs[subject.id] = docRef.id;
+          const { id, ...rest } = subject;
+          batch.set(docRef, rest);
         });
 
         initialTimetable.forEach(entry => {
-           const docRef = doc(collection(db, `users/${user.uid}/timetable`));
-           const newSubjectId = newSubjectRefs[entry.subjectId];
-           if (newSubjectId) {
-             batch.set(docRef, { ...entry, subjectId: newSubjectId });
-           }
+          const docRef = doc(collection(db, `users/${uid}/timetable`));
+          const newSubjectId = newSubjectRefs[entry.subjectId];
+          if (newSubjectId) {
+            batch.set(docRef, { ...entry, subjectId: newSubjectId });
+          }
         });
-        
+
         batch.set(userDocRef, { seeded: true }, { merge: true });
         await batch.commit();
       }
 
       const [subjectsSnapshot, timetableSnapshot, attendanceSnapshot] = await Promise.all([
-          getDocs(query(collection(db, `users/${user.uid}/subjects`))),
-          getDocs(query(collection(db, `users/${user.uid}/timetable`))),
-          getDocs(query(collection(db, `users/${user.uid}/attendance`)))
+        getDocs(query(collection(db, `users/${uid}/subjects`))),
+        getDocs(query(collection(db, `users/${uid}/timetable`))),
+        getDocs(query(collection(db, `users/${uid}/attendance`)))
       ]);
 
       setSubjects(subjectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Subject)));
       setTimetable(timetableSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TimetableEntry)));
       setAttendance(attendanceSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendanceRecord)));
-      
     } catch (error) {
       console.error("Error fetching data:", error);
       toast({ title: "Error", description: "Could not fetch your data. Please ensure you have created a Firestore database in your Firebase project.", variant: 'destructive', duration: 10000 });
     } finally {
-        setIsDataLoaded(true);
+      setIsDataLoaded(true);
     }
-  }, [user, toast]);
-  
+  }, [toast]);
+
   useEffect(() => {
-    if(user && !isDataLoaded) {
-      fetchData();
+    if (user && !isDataLoaded) {
+      fetchData(user.uid);
     }
   }, [user, isDataLoaded, fetchData]);
 
@@ -133,15 +126,6 @@ export default function Dashboard() {
       const q = query(collection(db, `users/${user.uid}/attendance`), where('date', '==', date));
       const querySnapshot = await getDocs(q);
       
-      const existingRecordsForDay = querySnapshot.docs.map(d => d.id);
-      
-      // Delete existing records for the date only if they are not part of the new submission
-      const recordsToDelete = new Set(existingRecordsForDay);
-      records.forEach(r => {
-          // This part is tricky as we don't have an ID to match.
-          // A better approach is to just delete all for the day and add new ones.
-      });
-
       querySnapshot.forEach(doc => {
           batch.delete(doc.ref);
       });
@@ -153,8 +137,7 @@ export default function Dashboard() {
 
       await batch.commit();
       
-      // Refetch all data to ensure UI consistency
-      await fetchData();
+      await fetchData(user.uid);
 
       toast({
         title: "Attendance Saved",
@@ -180,16 +163,13 @@ export default function Dashboard() {
     try {
         const batch = writeBatch(db);
 
-        // Delete subject
         const subjectRef = doc(db, `users/${user.uid}/subjects`, subjectToDelete.id);
         batch.delete(subjectRef);
 
-        // Find and delete timetable entries
         const ttQuery = query(collection(db, `users/${user.uid}/timetable`), where('subjectId', '==', subjectToDelete.id));
         const ttSnapshot = await getDocs(ttQuery);
         ttSnapshot.forEach(doc => batch.delete(doc.ref));
 
-        // Find and delete attendance records
         const attQuery = query(collection(db, `users/${user.uid}/attendance`), where('subjectId', '==', subjectToDelete.id));
         const attSnapshot = await getDocs(attQuery);
         attSnapshot.forEach(doc => batch.delete(doc.ref));
@@ -263,7 +243,7 @@ export default function Dashboard() {
   }
   
   if (authLoading || !isDataLoaded) {
-    return <div>Loading your personalized dashboard...</div>
+    return <div className="flex items-center justify-center h-screen">Loading your personalized dashboard...</div>
   }
 
   return (
