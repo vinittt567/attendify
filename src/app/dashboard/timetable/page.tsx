@@ -11,23 +11,6 @@ import { cn } from '@/lib/utils';
 import { Header } from '@/components/dashboard/header'; 
 import { AddSubjectDialog, SubjectFormValues } from '@/components/dashboard/add-subject-dialog';
 
-
-// Mock Data
-const MOCK_SUBJECTS: Subject[] = [
-  { id: '1', name: 'Quantum Physics', shortCode: 'PHY404', color: 'bg-blue-500' },
-  { id: '2', name: 'Organic Chemistry', shortCode: 'CHEM301', color: 'bg-purple-500' },
-  { id: '3', name: 'Shakespearean Literature', shortCode: 'ENG210', color: 'bg-amber-500' },
-  { id: '4', name: 'Advanced Calculus', shortCode: 'MATH350', color: 'bg-red-500' },
-];
-
-const MOCK_TIMETABLE: TimetableEntry[] = [
-    { id: 't1', subjectId: '1', day: 'Monday', startTime: '10:00', endTime: '11:00' },
-    { id: 't2', subjectId: '2', day: 'Monday', startTime: '11:00', endTime: '12:00' },
-    { id: 't3', subjectId: '3', day: 'Wednesday', startTime: '09:00', endTime: '11:00' },
-    { id: 't4', subjectId: '4', day: 'Friday', startTime: '14:00', endTime: '16:00' },
-];
-
-
 const DAYS_OF_WEEK: TimetableEntry['day'][] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 export default function TimetablePage() {
@@ -37,12 +20,6 @@ export default function TimetablePage() {
   const [isAddSubjectDialogOpen, setIsAddSubjectDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    // Simulate fetching data
-    setSubjects(MOCK_SUBJECTS);
-    setTimetable(MOCK_TIMETABLE);
-  }, []);
-  
   const handleAddSubject = (values: SubjectFormValues) => {
     const newSubject: Subject = {
       id: crypto.randomUUID(),
@@ -88,7 +65,16 @@ export default function TimetablePage() {
         <main className="flex-1 p-4 sm:p-6">
             <div className="flex items-center justify-between mb-6">
                 <h1 className="font-headline text-2xl font-bold">Weekly Timetable</h1>
-                <Button onClick={() => setIsAddEntryDialogOpen(true)}>
+                <Button onClick={() => {
+                  if (subjects.length > 0) {
+                    setIsAddEntryDialogOpen(true)
+                  } else {
+                    toast({
+                      title: "Add a Subject First",
+                      description: "You need to add a subject before creating timetable entries.",
+                    })
+                  }
+                }}>
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Add Class
                 </Button>

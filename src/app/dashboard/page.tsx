@@ -24,28 +24,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-// Mock Data
-const MOCK_SUBJECTS: Subject[] = [
-  { id: '1', name: 'Quantum Physics', shortCode: 'PHY404', color: 'bg-blue-500' },
-  { id: '2', name: 'Organic Chemistry', shortCode: 'CHEM301', color: 'bg-purple-500' },
-  { id: '3', name: 'Shakespearean Literature', shortCode: 'ENG210', color: 'bg-amber-500' },
-  { id: '4', name: 'Advanced Calculus', shortCode: 'MATH350', color: 'bg-red-500' },
-];
-
-const MOCK_ATTENDANCE: AttendanceRecord[] = Array.from({ length: 30 }).flatMap((_, dayIndex) => 
-  MOCK_SUBJECTS.map(subject => {
-    const date = new Date();
-    date.setDate(date.getDate() - dayIndex);
-    const random = Math.random();
-    const status = random > 0.3 ? 'Present' : random > 0.1 ? 'Absent' : 'No Class';
-    return {
-      date: format(date, 'yyyy-MM-dd'),
-      subjectId: subject.id,
-      status: status,
-    } as AttendanceRecord
-  })
-);
-
 export default function Dashboard() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
@@ -55,12 +33,6 @@ export default function Dashboard() {
   const [subjectToDelete, setSubjectToDelete] = useState<Subject | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const { toast } = useToast();
-
-  useEffect(() => {
-    // Simulate fetching data
-    setSubjects(MOCK_SUBJECTS);
-    setAttendance(MOCK_ATTENDANCE);
-  }, []);
 
   const handleAddSubject = (values: SubjectFormValues) => {
     const newSubject: Subject = {
@@ -146,6 +118,12 @@ export default function Dashboard() {
                   </motion.div>
                 ))}
               </AnimatePresence>
+              {subjects.length === 0 && (
+                <div className="text-center text-muted-foreground col-span-full py-12">
+                  <h3 className="text-lg font-semibold">No subjects yet!</h3>
+                  <p className="mt-1">Click the "Add Subject" button to get started.</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -160,7 +138,14 @@ export default function Dashboard() {
                 selected={selectedDate}
                 onSelect={(date) => {
                   setSelectedDate(date);
-                  setIsMarkerDialogOpen(true);
+                  if (subjects.length > 0) {
+                    setIsMarkerDialogOpen(true);
+                  } else {
+                    toast({
+                      title: "Add a Subject First",
+                      description: "You need to add at least one subject before marking attendance.",
+                    })
+                  }
                 }}
                 modifiers={{ marked: markedDays }}
                 modifiersStyles={{
