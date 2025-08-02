@@ -1,7 +1,9 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import type { Subject, AttendanceRecord } from '@/lib/types';
+import type { Subject, AttendanceRecord, TimetableEntry } from '@/lib/types';
+import { initialSubjects, initialTimetable } from '@/lib/mock-data';
 import type { SubjectFormValues } from '@/components/dashboard/add-subject-dialog';
 import { Header } from '@/components/dashboard/header';
 import { AddSubjectDialog } from '@/components/dashboard/add-subject-dialog';
@@ -9,7 +11,7 @@ import { SubjectCard } from '@/components/dashboard/subject-card';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AttendanceMarkerDialog } from '@/components/dashboard/attendance-marker-dialog';
-import { format, isSameDay } from 'date-fns';
+import { format, isSameDay, getDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -24,17 +26,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-const initialSubjects: Subject[] = [
-    { id: '1', name: 'Computer Networks', shortCode: 'CN', color: 'bg-red-500' },
-    { id: '2', name: 'Web Computing', shortCode: 'WC', color: 'bg-blue-500' },
-    { id: '3', name: 'Artificial Intelligence', shortCode: 'AI', color: 'bg-green-500' },
-    { id: '4', name: 'AI in Data Science', shortCode: 'SAIDS', color: 'bg-yellow-500' },
-    { id: '5', name: 'professional communication and ethics', shortCode: 'PCE', color: 'bg-purple-500' },
-    { id: '6', name: 'Data Warehousing & Mining', shortCode: 'DWM', color: 'bg-pink-500' },
-];
+const DAYS_OF_WEEK: TimetableEntry['day'][] = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export default function Dashboard() {
   const [subjects, setSubjects] = useState<Subject[]>(initialSubjects);
+  const [timetable, setTimetable] = useState<TimetableEntry[]>(initialTimetable);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [isAddSubjectDialogOpen, setIsAddSubjectDialogOpen] = useState(false);
   const [isMarkerDialogOpen, setIsMarkerDialogOpen] = useState(false);
@@ -94,10 +90,47 @@ export default function Dashboard() {
     return attendance.filter(r => isSameDay(new Date(r.date), selectedDate));
   }, [attendance, selectedDate]);
   
+  const subjectsForSelectedDay = useMemo(() => {
+    if (!selectedDate) return [];
+    const dayOfWeek = DAYS_OF_WEEK[getDay(selectedDate)];
+    const subjectIdsForDay = new Set(timetable
+      .filter(entry => entry.day === dayOfWeek)
+      .map(entry => entry.subjectId));
+    return subjects.filter(subject => subjectIdsForDay.has(subject.id));
+  }, [selectedDate, timetable, subjects]);
+
   const markedDays = useMemo(() => {
     const uniqueDates = new Set(attendance.map(a => a.date));
     return Array.from(uniqueDates).map(dateStr => new Date(dateStr));
   }, [attendance]);
+
+  const handleDateSelect = (date: Date | undefined) => {
+    setSelectedDate(date);
+    if (!date) return;
+
+    if (subjects.length === 0) {
+      toast({
+        title: "Add a Subject First",
+        description: "You need to add at least one subject before marking attendance.",
+      });
+      return;
+    }
+
+    const dayOfWeek = DAYS_OF_WEEK[getDay(date)];
+    const subjectIdsForDay = new Set(timetable
+      .filter(entry => entry.day === dayOfWeek)
+      .map(entry => entry.subjectId));
+    
+    if (subjectIdsForDay.size === 0) {
+      toast({
+        title: "No Classes Scheduled",
+        description: `There are no classes scheduled for ${dayOfWeek}.`,
+      });
+      return;
+    }
+
+    setIsMarkerDialogOpen(true);
+  }
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -145,17 +178,7 @@ export default function Dashboard() {
               <Calendar
                 mode="single"
                 selected={selectedDate}
-                onSelect={(date) => {
-                  setSelectedDate(date);
-                  if (subjects.length > 0) {
-                    setIsMarkerDialogOpen(true);
-                  } else {
-                    toast({
-                      title: "Add a Subject First",
-                      description: "You need to add at least one subject before marking attendance.",
-                    })
-                  }
-                }}
+                onSelect={handleDateSelect}
                 modifiers={{ marked: markedDays }}
                 modifiersStyles={{
                   marked: {
@@ -185,7 +208,7 @@ export default function Dashboard() {
         isOpen={isMarkerDialogOpen}
         onOpenChange={setIsMarkerDialogOpen}
         date={selectedDate}
-        subjects={subjects}
+        subjects={subjectsForSelectedDay}
         attendanceForDay={attendanceForSelectedDay}
         onSave={handleSaveAttendance}
       />
