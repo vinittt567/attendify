@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useRouter } from 'next/navigation';
@@ -59,7 +60,7 @@ export default function LoginPage() {
       className="relative flex size-full min-h-screen flex-col justify-between group/design-root overflow-x-hidden"
       style={{
         fontFamily: 'Manrope, "Noto Sans", sans-serif',
-        background: 'linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%)',
+        background: 'linear-gradient(135deg, #d4fc79 0%, #96e6a1 100%)',
       }}
     >
       <div>
