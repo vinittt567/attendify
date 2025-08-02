@@ -27,7 +27,6 @@ import {
 import { useAuth } from '@/context/auth-provider';
 import { db } from '@/lib/firebase';
 import { collection, doc, getDocs, writeBatch, addDoc, deleteDoc, query, where, setDoc } from 'firebase/firestore';
-import { initialSubjects, initialTimetable } from '@/lib/mock-data';
 
 const DAYS_OF_WEEK: TimetableEntry['day'][] = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -48,39 +47,11 @@ export default function Dashboard() {
     try {
       const subjectsCollection = collection(db, `users/${uid}/subjects`);
       const subjectsSnapshot = await getDocs(subjectsCollection);
-      
-      let fetchedSubjects: Subject[];
-
-      if (subjectsSnapshot.empty) {
-        // If no subjects, this is likely a new user. Seed the data.
-        const batch = writeBatch(db);
-        
-        initialSubjects.forEach(subject => {
-            const docRef = doc(db, `users/${uid}/subjects`, subject.id);
-            batch.set(docRef, subject);
-        });
-        
-        initialTimetable.forEach(entry => {
-            const docRef = doc(db, `users/${uid}/timetable`, entry.id);
-            batch.set(docRef, entry);
-        });
-        
-        await batch.commit();
-        
-        // Refetch after seeding
-        const newSubjectsSnapshot = await getDocs(subjectsCollection);
-        fetchedSubjects = newSubjectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Subject));
-        
-        const timetableSnapshot = await getDocs(collection(db, `users/${uid}/timetable`));
-        setTimetable(timetableSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TimetableEntry)));
-
-      } else {
-        fetchedSubjects = subjectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Subject));
-        const timetableSnapshot = await getDocs(collection(db, `users/${uid}/timetable`));
-        setTimetable(timetableSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TimetableEntry)));
-      }
-      
+      const fetchedSubjects = subjectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Subject));
       setSubjects(fetchedSubjects);
+
+      const timetableSnapshot = await getDocs(collection(db, `users/${uid}/timetable`));
+      setTimetable(timetableSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TimetableEntry)));
       
       const attendanceSnapshot = await getDocs(query(collection(db, `users/${uid}/attendance`)));
       setAttendance(attendanceSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendanceRecord)));
@@ -107,12 +78,16 @@ export default function Dashboard() {
   const handleAddSubject = async (values: SubjectFormValues) => {
     if (!user) return;
     try {
-      const newSubjectRef = doc(collection(db, `users/${user.uid}/subjects`));
-      const newSubject: Subject = {
-        id: newSubjectRef.id,
-        ...values,
+      const newSubjectData = {
+        name: values.name,
+        shortCode: values.shortCode,
+        color: values.color
       };
-      await setDoc(newSubjectRef, values);
+      const docRef = await addDoc(collection(db, `users/${user.uid}/subjects`), newSubjectData);
+      const newSubject: Subject = {
+        id: docRef.id,
+        ...newSubjectData
+      };
       setSubjects(prev => [...prev, newSubject]);
       setIsAddSubjectDialogOpen(false);
       toast({
@@ -258,7 +233,7 @@ export default function Dashboard() {
     setIsMarkerDialogOpen(true);
   }
   
-  if (authLoading || (!isDataLoaded && !user)) {
+  if (authLoading || !isDataLoaded) {
     return <div className="flex items-center justify-center h-screen">Loading your personalized dashboard...</div>
   }
 
