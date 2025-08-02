@@ -13,8 +13,17 @@ import { AddSubjectDialog, SubjectFormValues } from '@/components/dashboard/add-
 
 const DAYS_OF_WEEK: TimetableEntry['day'][] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
+const initialSubjects: Subject[] = [
+    { id: '1', name: 'Computer Networks', shortCode: 'CN', color: 'bg-red-500' },
+    { id: '2', name: 'Wireless Communication', shortCode: 'WC', color: 'bg-blue-500' },
+    { id: '3', name: 'Artificial Intelligence', shortCode: 'AI', color: 'bg-green-500' },
+    { id: '4', name: 'AI in Data Science', shortCode: 'SAIDS', color: 'bg-yellow-500' },
+    { id: '5', name: 'Prof. & Career Enhancement', shortCode: 'PCE', color: 'bg-purple-500' },
+    { id: '6', name: 'Data Warehousing & Mining', shortCode: 'DWM', color: 'bg-pink-500' },
+];
+
 export default function TimetablePage() {
-  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [subjects, setSubjects] = useState<Subject[]>(initialSubjects);
   const [timetable, setTimetable] = useState<TimetableEntry[]>([]);
   const [isAddEntryDialogOpen, setIsAddEntryDialogOpen] = useState(false);
   const [isAddSubjectDialogOpen, setIsAddSubjectDialogOpen] = useState(false);
