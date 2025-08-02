@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from "@/components/ui/button";
-import { PlusCircle, BookOpen, LogOut } from "lucide-react";
+import { PlusCircle, BookOpen, LogOut, CalendarDays } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -42,9 +42,17 @@ export function Header({ onAddSubject }: HeaderProps) {
         </h1>
       </div>
       <div className="flex items-center gap-4">
+        <Button variant="outline" onClick={() => router.push('/dashboard/timetable')} className="hidden sm:flex">
+          <CalendarDays className="mr-2 h-4 w-4" />
+          Timetable
+        </Button>
         <Button onClick={onAddSubject} className="hidden sm:flex">
           <PlusCircle className="mr-2 h-4 w-4" />
           Add Subject
+        </Button>
+         <Button variant="outline" size="icon" onClick={() => router.push('/dashboard/timetable')} className="flex sm:hidden">
+          <CalendarDays className="h-4 w-4" />
+           <span className="sr-only">Timetable</span>
         </Button>
         <Button onClick={onAddSubject} size="icon" className="flex sm:hidden">
           <PlusCircle className="h-4 w-4" />
