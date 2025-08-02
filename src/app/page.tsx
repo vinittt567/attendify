@@ -77,21 +77,6 @@ export default function LoginPage() {
             ></div>
           </div>
         </div>
-        <div className="p-4">
-          <div
-            className="bg-cover bg-center flex flex-col items-stretch justify-end rounded-xl pt-[132px]"
-            style={{
-              backgroundImage: `linear-gradient(0deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0) 100%), url("https://placehold.co/600x300.png")`
-            }}
-            data-ai-hint="attendance register"
-          >
-            <div className="flex w-full items-end justify-between gap-4 p-4">
-              <p className="text-white tracking-light text-2xl font-bold leading-tight flex-1">
-                Sign in with Google
-              </p>
-            </div>
-          </div>
-        </div>
       </div>
       <div>
         <div className="flex px-4 py-3 justify-center">
