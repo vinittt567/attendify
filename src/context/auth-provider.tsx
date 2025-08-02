@@ -23,20 +23,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setLoading(false);
-      
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!loading) {
       if (user && pathname === '/') {
         router.push('/dashboard');
       } else if (!user && pathname !== '/') {
         router.push('/');
       }
-    });
+    }
+  }, [user, loading, router, pathname]);
 
-    return () => unsubscribe();
-  }, [router, pathname]);
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <AuthContext.Provider value={{ user, loading }}>
-      {loading ? <div>Loading...</div> : children}
+      {children}
     </AuthContext.Provider>
   );
 };

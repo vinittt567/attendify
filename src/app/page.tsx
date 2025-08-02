@@ -21,22 +21,15 @@ const GoogleIcon = () => (
 );
 
 export default function LoginPage() {
-  const router = useRouter();
   const { toast } = useToast();
   const { user, loading } = useAuth();
-
-  useEffect(() => {
-    if (!loading && user) {
-      router.push('/dashboard');
-    }
-  }, [user, loading, router]);
-
+  const router = useRouter();
 
   const handleSignIn = async () => {
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
-      // The auth provider will handle the redirect
+      // The auth provider will handle the redirect to /dashboard
     } catch (error: any) {
       if (error.code === 'auth/popup-closed-by-user') {
         return;

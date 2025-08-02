@@ -26,13 +26,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useAuth } from '@/context/auth-provider';
 import { db } from '@/lib/firebase';
-import { collection, doc, getDocs, writeBatch, addDoc, deleteDoc, query, where, documentId, getDoc } from 'firebase/firestore';
+import { collection, doc, getDocs, writeBatch, addDoc, deleteDoc, query, where, documentId, getDoc, setDoc } from 'firebase/firestore';
 import { initialSubjects, initialTimetable } from '@/lib/mock-data';
 
 const DAYS_OF_WEEK: TimetableEntry['day'][] = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [timetable, setTimetable] = useState<TimetableEntry[]>([]);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
@@ -46,27 +46,23 @@ export default function Dashboard() {
 
   const fetchData = useCallback(async (forceRefetch = false) => {
     if (!user || (isDataLoaded && !forceRefetch)) return;
+
     try {
+      setIsDataLoaded(false); // Set loading state to true when fetching starts
       const userDocRef = doc(db, `users/${user.uid}`);
-      const userDocSnap = await getDoc(userDocRef);
-
       const subjectsQuery = query(collection(db, `users/${user.uid}/subjects`));
-      const timetableQuery = query(collection(db, `users/${user.uid}/timetable`));
-      const attendanceQuery = query(collection(db, `users/${user.uid}/attendance`));
       
-      let subjectsSnapshot = await getDocs(subjectsQuery);
-      let timetableSnapshot = await getDocs(timetableQuery);
-      const attendanceSnapshot = await getDocs(attendanceQuery);
-
-      if (!userDocSnap.exists() || subjectsSnapshot.empty) {
+      const userDocSnap = await getDoc(userDocRef);
+      
+      if (!userDocSnap.exists()) {
         const batch = writeBatch(db);
-
         const newSubjectRefs: {[key: string]: string} = {};
+        
         initialSubjects.forEach(subject => {
-          const docRef = doc(collection(db, `users/${user.uid}/subjects`));
-          newSubjectRefs[subject.id] = docRef.id;
-          const {id, ...rest} = subject;
-          batch.set(docRef, rest);
+            const docRef = doc(collection(db, `users/${user.uid}/subjects`));
+            newSubjectRefs[subject.id] = docRef.id;
+            const {id, ...rest} = subject;
+            batch.set(docRef, rest);
         });
 
         initialTimetable.forEach(entry => {
@@ -77,15 +73,16 @@ export default function Dashboard() {
            }
         });
         
-        // Mark that the user has been seeded
-        batch.set(userDocRef, { seeded: true }, { merge: true });
-
+        batch.set(userDocRef, { seeded: true });
         await batch.commit();
-
-        subjectsSnapshot = await getDocs(subjectsQuery);
-        timetableSnapshot = await getDocs(timetableQuery);
       }
-      
+
+      const [subjectsSnapshot, timetableSnapshot, attendanceSnapshot] = await Promise.all([
+          getDocs(subjectsQuery),
+          getDocs(query(collection(db, `users/${user.uid}/timetable`))),
+          getDocs(query(collection(db, `users/${user.uid}/attendance`)))
+      ]);
+
       setSubjects(subjectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Subject)));
       setTimetable(timetableSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TimetableEntry)));
       setAttendance(attendanceSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendanceRecord)));
@@ -99,10 +96,10 @@ export default function Dashboard() {
   }, [user, toast, isDataLoaded]);
   
   useEffect(() => {
-    if(user && !isDataLoaded) {
+    if(user) {
       fetchData();
     }
-  }, [user, isDataLoaded, fetchData]);
+  }, [user]);
 
 
   const handleAddSubject = async (values: SubjectFormValues) => {
@@ -249,7 +246,7 @@ export default function Dashboard() {
     setIsMarkerDialogOpen(true);
   }
   
-  if (!isDataLoaded) {
+  if (authLoading || !isDataLoaded) {
     return <div>Loading your personalized dashboard...</div>
   }
 
@@ -351,5 +348,3 @@ export default function Dashboard() {
     </div>
   );
 }
-
-    
