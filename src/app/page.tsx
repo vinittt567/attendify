@@ -54,8 +54,11 @@ export default function LoginPage() {
 
   return (
     <div
-      className="relative flex size-full min-h-screen flex-col bg-gradient-to-br from-slate-50 to-slate-200 justify-between group/design-root overflow-x-hidden"
-      style={{ fontFamily: 'Manrope, "Noto Sans", sans-serif' }}
+      className="relative flex size-full min-h-screen flex-col justify-between group/design-root overflow-x-hidden"
+      style={{
+        fontFamily: 'Manrope, "Noto Sans", sans-serif',
+        background: 'linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%)',
+      }}
     >
       <div>
         <div className="flex items-center p-4 pb-2 justify-between">
