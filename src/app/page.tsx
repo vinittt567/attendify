@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { BookOpen } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase';
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from 'firebase/auth';
+import { useEffect } from 'react';
 
 const GoogleIcon = () => (
     <svg className="size-5" viewBox="0 0 48 48" aria-hidden="true">
@@ -24,18 +25,28 @@ export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
 
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        router.push('/dashboard');
+      }
+    });
+    return () => unsubscribe();
+  }, [router]);
+
   const handleSignIn = async () => {
     const provider = new GoogleAuthProvider();
     try {
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-      toast({
-        title: "Signed In Successfully",
-        description: `Welcome back, ${user.displayName}!`,
-      });
-      router.push('/dashboard');
+      await signInWithPopup(auth, provider);
+      // The onAuthStateChanged listener will handle the redirect
     } catch (error: any) {
       console.error("Authentication error:", error);
+      
+      // Avoid showing a toast if the user closes the popup
+      if (error.code === 'auth/popup-closed-by-user') {
+        return;
+      }
+
       toast({
         title: "Uh Oh! Something went wrong.",
         description: "There was a problem with your request.",
