@@ -1,9 +1,8 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import type { Subject, AttendanceRecord, TimetableEntry } from '@/lib/types';
-import { initialSubjects, initialTimetable } from '@/lib/mock-data';
 import type { SubjectFormValues } from '@/components/dashboard/add-subject-dialog';
 import { Header } from '@/components/dashboard/header';
 import { AddSubjectDialog } from '@/components/dashboard/add-subject-dialog';
@@ -25,13 +24,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useAuth } from '@/context/auth-provider';
+import { db } from '@/lib/firebase';
+import { collection, doc, getDocs, writeBatch, addDoc, deleteDoc, query, where, documentId } from 'firebase/firestore';
+import { initialSubjects, initialTimetable } from '@/lib/mock-data';
 
 const DAYS_OF_WEEK: TimetableEntry['day'][] = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export default function Dashboard() {
-  const [subjects, setSubjects] = useState<Subject[]>(initialSubjects);
-  const [timetable, setTimetable] = useState<TimetableEntry[]>(initialTimetable);
+  const { user } = useAuth();
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [timetable, setTimetable] = useState<TimetableEntry[]>([]);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [isAddSubjectDialogOpen, setIsAddSubjectDialogOpen] = useState(false);
   const [isMarkerDialogOpen, setIsMarkerDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -39,28 +44,105 @@ export default function Dashboard() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const { toast } = useToast();
 
-  const handleAddSubject = (values: SubjectFormValues) => {
-    const newSubject: Subject = {
-      id: crypto.randomUUID(),
-      ...values,
-    };
-    setSubjects(prev => [...prev, newSubject]);
-    setIsAddSubjectDialogOpen(false);
-    toast({
-      title: "Subject Added!",
-      description: `${newSubject.name} has been added to your subjects.`,
-    });
-  };
+  const fetchData = useCallback(async () => {
+    if (!user) return;
+    try {
+      const subjectsQuery = query(collection(db, `users/${user.uid}/subjects`));
+      const timetableQuery = query(collection(db, `users/${user.uid}/timetable`));
+      const attendanceQuery = query(collection(db, `users/${user.uid}/attendance`));
 
-  const handleSaveAttendance = (records: AttendanceRecord[]) => {
-    setAttendance(prev => {
-      const otherDaysAttendance = prev.filter(r => r.date !== records[0].date);
-      return [...otherDaysAttendance, ...records];
-    });
-    toast({
-      title: "Attendance Saved",
-      description: `Attendance for ${format(new Date(records[0].date), 'MMMM d, yyyy')} has been updated.`,
-    });
+      const [subjectsSnapshot, timetableSnapshot, attendanceSnapshot] = await Promise.all([
+        getDocs(subjectsQuery),
+        getDocs(timetableQuery),
+        getDocs(attendanceQuery),
+      ]);
+      
+      let fetchedSubjects: Subject[] = subjectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Subject));
+      let fetchedTimetable: TimetableEntry[] = timetableSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TimetableEntry));
+      
+      if (fetchedSubjects.length === 0 && fetchedTimetable.length === 0) {
+        const batch = writeBatch(db);
+        initialSubjects.forEach(subject => {
+          const docRef = doc(collection(db, `users/${user.uid}/subjects`));
+          batch.set(docRef, {name: subject.name, shortCode: subject.shortCode, color: subject.color});
+        });
+        initialTimetable.forEach(entry => {
+           const docRef = doc(collection(db, `users/${user.uid}/timetable`));
+           batch.set(docRef, {subjectId: entry.subjectId, day: entry.day, startTime: entry.startTime, endTime: entry.endTime});
+        });
+        await batch.commit();
+        
+        const newSubjectsSnapshot = await getDocs(subjectsQuery);
+        fetchedSubjects = newSubjectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Subject));
+        const newTimetableSnapshot = await getDocs(timetableQuery);
+        fetchedTimetable = newTimetableSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TimetableEntry));
+      }
+
+      setSubjects(fetchedSubjects);
+      setTimetable(fetchedTimetable);
+      setAttendance(attendanceSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendanceRecord)));
+      
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      toast({ title: "Error", description: "Could not fetch your data.", variant: 'destructive' });
+    } finally {
+        setIsDataLoaded(true);
+    }
+  }, [user, toast]);
+  
+  useEffect(() => {
+    if(user && !isDataLoaded) {
+      fetchData();
+    }
+  }, [user, isDataLoaded, fetchData]);
+
+
+  const handleAddSubject = async (values: SubjectFormValues) => {
+    if (!user) return;
+    try {
+      const docRef = await addDoc(collection(db, `users/${user.uid}/subjects`), values);
+      const newSubject: Subject = {
+        id: docRef.id,
+        ...values,
+      };
+      setSubjects(prev => [...prev, newSubject]);
+      setIsAddSubjectDialogOpen(false);
+      toast({
+        title: "Subject Added!",
+        description: `${newSubject.name} has been added to your subjects.`,
+      });
+    } catch (error) {
+      console.error("Error adding subject:", error);
+      toast({ title: "Error", description: "Could not add subject.", variant: 'destructive' });
+    }
+  };
+  
+  const handleSaveAttendance = async (records: Omit<AttendanceRecord, 'id'>[]) => {
+    if (!user || !records.length) return;
+    try {
+      const batch = writeBatch(db);
+      const date = records[0].date;
+      
+      const q = query(collection(db, `users/${user.uid}/attendance`), where('date', '==', date));
+      const querySnapshot = await getDocs(q);
+      querySnapshot.forEach(doc => batch.delete(doc.ref));
+
+      records.forEach(record => {
+        const docRef = doc(collection(db, `users/${user.uid}/attendance`));
+        batch.set(docRef, record);
+      });
+      await batch.commit();
+      
+      await fetchData(); // Refetch to get the latest state
+
+      toast({
+        title: "Attendance Saved",
+        description: `Attendance for ${format(new Date(date), 'MMMM d, yyyy')} has been updated.`,
+      });
+    } catch (error) {
+       console.error("Error saving attendance:", error);
+       toast({ title: "Error", description: "Could not save attendance.", variant: 'destructive' });
+    }
   };
 
   const openDeleteDialog = (subjectId: string) => {
@@ -71,23 +153,50 @@ export default function Dashboard() {
     }
   };
 
-  const confirmDeleteSubject = () => {
-    if (subjectToDelete) {
-      setSubjects(prev => prev.filter(s => s.id !== subjectToDelete.id));
-      setAttendance(prev => prev.filter(a => a.subjectId !== subjectToDelete.id));
-      toast({
-        title: "Subject Deleted",
-        description: `${subjectToDelete.name} and its attendance records have been removed.`,
-        variant: 'destructive',
-      });
+  const confirmDeleteSubject = async () => {
+    if (!subjectToDelete || !user) return;
+    
+    try {
+        const batch = writeBatch(db);
+
+        // Delete subject
+        const subjectRef = doc(db, `users/${user.uid}/subjects`, subjectToDelete.id);
+        batch.delete(subjectRef);
+
+        // Find and delete timetable entries
+        const ttQuery = query(collection(db, `users/${user.uid}/timetable`), where('subjectId', '==', subjectToDelete.id));
+        const ttSnapshot = await getDocs(ttQuery);
+        ttSnapshot.forEach(doc => batch.delete(doc.ref));
+
+        // Find and delete attendance records
+        const attQuery = query(collection(db, `users/${user.uid}/attendance`), where('subjectId', '==', subjectToDelete.id));
+        const attSnapshot = await getDocs(attQuery);
+        attSnapshot.forEach(doc => batch.delete(doc.ref));
+
+        await batch.commit();
+
+        setSubjects(prev => prev.filter(s => s.id !== subjectToDelete.id));
+        setTimetable(prev => prev.filter(t => t.subjectId !== subjectToDelete.id));
+        setAttendance(prev => prev.filter(a => a.subjectId !== subjectToDelete.id));
+      
+        toast({
+            title: "Subject Deleted",
+            description: `${subjectToDelete.name} and all its records have been removed.`,
+            variant: 'destructive',
+        });
+    } catch (error) {
+        console.error("Error deleting subject:", error);
+        toast({ title: "Error", description: "Could not delete subject.", variant: 'destructive' });
+    } finally {
+        setSubjectToDelete(null);
+        setIsDeleteDialogOpen(false);
     }
-    setSubjectToDelete(null);
-    setIsDeleteDialogOpen(false);
   };
   
   const attendanceForSelectedDay = useMemo(() => {
     if (!selectedDate) return [];
-    return attendance.filter(r => isSameDay(new Date(r.date), selectedDate));
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    return attendance.filter(r => r.date === dateStr);
   }, [attendance, selectedDate]);
   
   const subjectsForSelectedDay = useMemo(() => {
@@ -101,7 +210,7 @@ export default function Dashboard() {
 
   const markedDays = useMemo(() => {
     const uniqueDates = new Set(attendance.map(a => a.date));
-    return Array.from(uniqueDates).map(dateStr => new Date(dateStr));
+    return Array.from(uniqueDates).map(dateStr => new Date(dateStr + 'T00:00:00'));
   }, [attendance]);
 
   const handleDateSelect = (date: Date | undefined) => {
@@ -130,6 +239,10 @@ export default function Dashboard() {
     }
 
     setIsMarkerDialogOpen(true);
+  }
+  
+  if (!isDataLoaded) {
+    return <div>Loading your personalized dashboard...</div>
   }
 
   return (

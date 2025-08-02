@@ -6,6 +6,7 @@ export type Subject = {
 };
 
 export type AttendanceRecord = {
+  id: string;
   date: string; // YYYY-MM-DD
   subjectId: string;
   status: 'Present' | 'Absent' | 'No Class';

@@ -23,8 +23,8 @@ type AttendanceMarkerDialogProps = {
   onOpenChange: (isOpen: boolean) => void;
   date: Date | undefined;
   subjects: Subject[];
-  attendanceForDay: AttendanceRecord[];
-  onSave: (records: AttendanceRecord[]) => void;
+  attendanceForDay: Omit<AttendanceRecord, 'id'>[];
+  onSave: (records: Omit<AttendanceRecord, 'id'>[]) => void;
 };
 
 type LocalAttendance = {
@@ -54,7 +54,7 @@ export function AttendanceMarkerDialog({
 
   const handleSave = () => {
     if (!date) return;
-    const recordsToSave: AttendanceRecord[] = Object.entries(localAttendance).map(([subjectId, status]) => ({
+    const recordsToSave: Omit<AttendanceRecord, 'id'>[] = Object.entries(localAttendance).map(([subjectId, status]) => ({
       date: format(date, 'yyyy-MM-dd'),
       subjectId,
       status,
@@ -108,11 +108,14 @@ export function AttendanceMarkerDialog({
                 {index < subjects.length - 1 && <Separator className="mt-4" />}
               </div>
             ))}
+             {subjects.length === 0 && (
+                <p className="text-center text-muted-foreground">No classes scheduled for this day.</p>
+            )}
           </div>
         </ScrollArea>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button type="button" onClick={handleSave}>Save Attendance</Button>
+          <Button type="button" onClick={handleSave} disabled={subjects.length === 0}>Save Attendance</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

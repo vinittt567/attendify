@@ -39,19 +39,21 @@ type AddTimetableEntryDialogProps = {
   onOpenChange: (isOpen: boolean) => void;
   onSubmit: (values: TimetableFormValues) => void;
   subjects: Subject[];
+  defaultValues?: Partial<TimetableFormValues>;
 };
 
-export function AddTimetableEntryDialog({ isOpen, onOpenChange, onSubmit, subjects }: AddTimetableEntryDialogProps) {
+export function AddTimetableEntryDialog({ isOpen, onOpenChange, onSubmit, subjects, defaultValues }: AddTimetableEntryDialogProps) {
   const form = useForm<z.infer<typeof timetableSchema>>({
     resolver: zodResolver(timetableSchema),
     defaultValues: {
       day: 'Monday',
+      ...defaultValues
     },
   });
 
   const handleFormSubmit = (values: z.infer<typeof timetableSchema>) => {
     onSubmit(values);
-    form.reset();
+    form.reset({day: 'Monday', startTime: '', endTime: ''});
   };
   
   return (
