@@ -28,7 +28,6 @@ export const initialTimetable: TimetableEntry[] = [
   { id: 'tt11', subjectId: 'sub2', day: 'Thursday', startTime: '09:30', endTime: '10:30' },
   { id: 'tt12', subjectId: 'sub6', day: 'Thursday', startTime: '10:30', endTime: '11:30' },
   { id: 'tt13', subjectId: 'sub3', day: 'Thursday', startTime: '13:00', endTime: '14:00' },
-  { id: 'tt14', subjectId: 'sub4', day: 'Thursday', startTime: '14:00', endTime: '15:00' },
   // Friday
   { id: 'tt15', subjectId: 'sub3', day: 'Friday', startTime: '09:30', endTime: '10:30' },
   { id: 'tt16', subjectId: 'sub2', day: 'Friday', startTime: '10:30', endTime: '11:30' },
