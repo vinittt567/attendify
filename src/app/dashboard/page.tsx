@@ -26,8 +26,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useAuth } from '@/context/auth-provider';
 import { db } from '@/lib/firebase';
-import { collection, doc, getDocs, writeBatch, addDoc, deleteDoc, query, where, getDoc, setDoc } from 'firebase/firestore';
-import { initialSubjects, initialTimetable } from '@/lib/mock-data';
+import { collection, doc, getDocs, writeBatch, addDoc, deleteDoc, query, where } from 'firebase/firestore';
 
 const DAYS_OF_WEEK: TimetableEntry['day'][] = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -46,33 +45,6 @@ export default function Dashboard() {
 
   const fetchData = useCallback(async (uid: string) => {
     try {
-      const userDocRef = doc(db, `users/${uid}`);
-      const userDocSnap = await getDoc(userDocRef);
-      let seeded = userDocSnap.exists() && userDocSnap.data()?.seeded;
-
-      if (!seeded) {
-        const batch = writeBatch(db);
-        const newSubjectRefs: { [key: string]: string } = {};
-
-        initialSubjects.forEach(subject => {
-          const docRef = doc(collection(db, `users/${uid}/subjects`));
-          newSubjectRefs[subject.id] = docRef.id;
-          const { id, ...rest } = subject;
-          batch.set(docRef, rest);
-        });
-
-        initialTimetable.forEach(entry => {
-          const docRef = doc(collection(db, `users/${uid}/timetable`));
-          const newSubjectId = newSubjectRefs[entry.subjectId];
-          if (newSubjectId) {
-            batch.set(docRef, { ...entry, subjectId: newSubjectId });
-          }
-        });
-
-        batch.set(userDocRef, { seeded: true }, { merge: true });
-        await batch.commit();
-      }
-
       const [subjectsSnapshot, timetableSnapshot, attendanceSnapshot] = await Promise.all([
         getDocs(query(collection(db, `users/${uid}/subjects`))),
         getDocs(query(collection(db, `users/${uid}/timetable`))),
@@ -344,5 +316,3 @@ export default function Dashboard() {
     </div>
   );
 }
-
-    
