@@ -54,11 +54,11 @@ export default function LoginPage() {
 
   return (
     <div
-      className="relative flex size-full min-h-screen flex-col bg-slate-50 justify-between group/design-root overflow-x-hidden"
+      className="relative flex size-full min-h-screen flex-col bg-gradient-to-br from-slate-50 to-slate-200 justify-between group/design-root overflow-x-hidden"
       style={{ fontFamily: 'Manrope, "Noto Sans", sans-serif' }}
     >
       <div>
-        <div className="flex items-center bg-slate-50 p-4 pb-2 justify-between">
+        <div className="flex items-center p-4 pb-2 justify-between">
           <h2 className="text-[#0e141b] text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center pl-12 pr-12">
             Attendance Tracker
           </h2>
@@ -66,36 +66,36 @@ export default function LoginPage() {
         <h3 className="text-[#0e141b] tracking-light text-2xl font-bold leading-tight px-4 text-center pb-2 pt-5">
           Welcome to Attendance Tracker
         </h3>
-        <div className="px-8 py-10">
-          <div className="space-y-8">
-            <div className="flex items-start gap-4">
-              <div className="text-3xl">📚</div>
-              <div>
-                <h4 className="font-bold text-lg text-slate-800">Create Subjects</h4>
-                <p className="text-slate-600 mt-1">Easily create and manage your subjects with custom names and color tags.</p>
-              </div>
+        <div className="p-4 sm:p-8">
+            <div className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-lg p-8 space-y-8 border">
+                <div className="flex items-start gap-4">
+                <div className="text-3xl">📚</div>
+                <div>
+                    <h4 className="font-bold text-lg text-slate-800">Create Subjects</h4>
+                    <p className="text-slate-600 mt-1">Easily create and manage your subjects with custom names and color tags.</p>
+                </div>
+                </div>
+                <div className="flex items-start gap-4">
+                <div className="text-3xl">🗓️</div>
+                <div>
+                    <h4 className="font-bold text-lg text-slate-800">Mark Daily Attendance</h4>
+                    <p className="text-slate-600 mt-1">Quickly mark your attendance every day using an intuitive calendar view.</p>
+                </div>
+                </div>
+                <div className="flex items-start gap-4">
+                <div className="text-3xl">📊</div>
+                <div>
+                    <h4 className="font-bold text-lg text-slate-800">View Attendance Stats</h4>
+                    <p className="text-slate-600 mt-1">Get insightful AI-powered summaries and statistics for each of your subjects.</p>
+                </div>
+                </div>
             </div>
-            <div className="flex items-start gap-4">
-              <div className="text-3xl">🗓️</div>
-              <div>
-                <h4 className="font-bold text-lg text-slate-800">Mark Daily Attendance</h4>
-                <p className="text-slate-600 mt-1">Quickly mark your attendance every day using an intuitive calendar view.</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-4">
-              <div className="text-3xl">📊</div>
-              <div>
-                <h4 className="font-bold text-lg text-slate-800">View Attendance Stats</h4>
-                <p className="text-slate-600 mt-1">Get insightful AI-powered summaries and statistics for each of your subjects.</p>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
       <div>
         <div className="flex px-4 py-3 justify-center">
           <button
-            className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-12 px-5 bg-[#e7edf3] text-[#0e141b] gap-2 pl-5 text-base font-bold leading-normal tracking-[0.015em]"
+            className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-12 px-5 bg-[#e7edf3] text-[#0e141b] gap-2 pl-5 text-base font-bold leading-normal tracking-[0.015em] shadow-md hover:shadow-lg transition-shadow"
             onClick={handleSignIn}
           >
             <div className="text-[#0e141b]">
@@ -104,7 +104,7 @@ export default function LoginPage() {
             <span className="truncate">Sign in with Google</span>
           </button>
         </div>
-        <div className="h-5 bg-slate-50"></div>
+        <div className="h-5"></div>
       </div>
     </div>
   );
