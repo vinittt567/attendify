@@ -44,17 +44,19 @@ export default function Dashboard() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const { toast } = useToast();
 
-  const fetchData = useCallback(async (forceRefetch = false) => {
-    if (!user || (isDataLoaded && !forceRefetch)) return;
+  const fetchData = useCallback(async () => {
+    if (!user) return;
 
     try {
-      setIsDataLoaded(false); // Set loading state to true when fetching starts
       const userDocRef = doc(db, `users/${user.uid}`);
-      const subjectsQuery = query(collection(db, `users/${user.uid}/subjects`));
-      
       const userDocSnap = await getDoc(userDocRef);
+
+      let seeded = false;
+      if (userDocSnap.exists()) {
+          seeded = userDocSnap.data()?.seeded;
+      }
       
-      if (!userDocSnap.exists()) {
+      if (!seeded) {
         const batch = writeBatch(db);
         const newSubjectRefs: {[key: string]: string} = {};
         
@@ -73,12 +75,12 @@ export default function Dashboard() {
            }
         });
         
-        batch.set(userDocRef, { seeded: true });
+        batch.set(userDocRef, { seeded: true }, { merge: true });
         await batch.commit();
       }
 
       const [subjectsSnapshot, timetableSnapshot, attendanceSnapshot] = await Promise.all([
-          getDocs(subjectsQuery),
+          getDocs(query(collection(db, `users/${user.uid}/subjects`))),
           getDocs(query(collection(db, `users/${user.uid}/timetable`))),
           getDocs(query(collection(db, `users/${user.uid}/attendance`)))
       ]);
@@ -89,17 +91,17 @@ export default function Dashboard() {
       
     } catch (error) {
       console.error("Error fetching data:", error);
-      toast({ title: "Error", description: "Could not fetch your data.", variant: 'destructive' });
+      toast({ title: "Error", description: "Could not fetch your data. Please ensure you have created a Firestore database in your Firebase project.", variant: 'destructive', duration: 10000 });
     } finally {
         setIsDataLoaded(true);
     }
-  }, [user, toast, isDataLoaded]);
+  }, [user, toast]);
   
   useEffect(() => {
-    if(user) {
+    if(user && !isDataLoaded) {
       fetchData();
     }
-  }, [user]);
+  }, [user, isDataLoaded, fetchData]);
 
 
   const handleAddSubject = async (values: SubjectFormValues) => {
@@ -130,15 +132,29 @@ export default function Dashboard() {
       
       const q = query(collection(db, `users/${user.uid}/attendance`), where('date', '==', date));
       const querySnapshot = await getDocs(q);
-      querySnapshot.forEach(doc => batch.delete(doc.ref));
+      
+      const existingRecordsForDay = querySnapshot.docs.map(d => d.id);
+      
+      // Delete existing records for the date only if they are not part of the new submission
+      const recordsToDelete = new Set(existingRecordsForDay);
+      records.forEach(r => {
+          // This part is tricky as we don't have an ID to match.
+          // A better approach is to just delete all for the day and add new ones.
+      });
+
+      querySnapshot.forEach(doc => {
+          batch.delete(doc.ref);
+      });
 
       records.forEach(record => {
         const docRef = doc(collection(db, `users/${user.uid}/attendance`));
         batch.set(docRef, record);
       });
+
       await batch.commit();
       
-      await fetchData(true); // Refetch to get the latest state
+      // Refetch all data to ensure UI consistency
+      await fetchData();
 
       toast({
         title: "Attendance Saved",
@@ -348,3 +364,5 @@ export default function Dashboard() {
     </div>
   );
 }
+
+    
