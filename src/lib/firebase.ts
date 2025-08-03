@@ -1,3 +1,4 @@
+
 // Import the functions you need from the SDKs you need
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
 import { getAuth, Auth } from "firebase/auth";
@@ -18,7 +19,14 @@ let app: FirebaseApp;
 let auth: Auth;
 let db: Firestore;
 
+// Function to initialize Firebase
 function initializeFirebase() {
+  const allConfigValuesPresent = Object.values(firebaseConfig).every(Boolean);
+  if (!allConfigValuesPresent) {
+    console.error("Firebase config is missing one or more values. App not initialized.");
+    return;
+  }
+  
   if (getApps().length === 0) {
     app = initializeApp(firebaseConfig);
   } else {
