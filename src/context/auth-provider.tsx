@@ -1,26 +1,38 @@
 
 'use client';
 
-import { createContext, useContext, ReactNode } from 'react';
+import { createContext, useContext, ReactNode, useState, useEffect } from 'react';
+import { getFirebaseAuth } from '@/lib/firebase';
+import type { User as FirebaseUser } from 'firebase/auth';
+import { onAuthStateChanged } from 'firebase/auth';
 
-// A placeholder user type.
-type User = {
-  displayName: string;
-  photoURL: string;
-} | null;
+type User = FirebaseUser | null;
 
 interface AuthContextType {
   user: User;
   loading: boolean;
 }
 
-const AuthContext = createContext<AuthContextType>({ user: null, loading: false });
+const AuthContext = createContext<AuthContextType>({ user: null, loading: true });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  // Since Firebase is removed, we'll provide a mock user or null.
-  // Set loading to false as there's no async auth check.
-  const user: User = null; 
-  const loading = false;
+  const [user, setUser] = useState<User>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const auth = getFirebaseAuth();
+    if (!auth) {
+      setLoading(false);
+      return;
+    }
+    
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   return (
     <AuthContext.Provider value={{ user, loading }}>

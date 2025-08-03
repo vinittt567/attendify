@@ -11,11 +11,16 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Header } from '@/components/dashboard/header'; 
 import { AddSubjectDialog, SubjectFormValues } from '@/components/dashboard/add-subject-dialog';
-import { initialSubjects, initialTimetable } from '@/lib/mock-data';
+import { useAuth } from '@/context/auth-provider';
+import { getFirestoreDb } from '@/lib/firebase';
+import { collection, onSnapshot, addDoc, doc, deleteDoc, orderBy, query } from 'firebase/firestore';
 
 const DAYS_OF_WEEK: TimetableEntry['day'][] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 export default function TimetablePage() {
+  const { user, loading } = useAuth();
+  const db = getFirestoreDb();
+
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [timetable, setTimetable] = useState<TimetableEntry[]>([]);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
@@ -24,50 +29,86 @@ export default function TimetablePage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Load mock data since Firebase is removed
-    setSubjects(initialSubjects);
-    setTimetable(initialTimetable);
-    setIsDataLoaded(true);
-  }, []);
+    if (!user || !db) return;
 
-  const handleAddSubject = (values: SubjectFormValues) => {
-    const newSubject: Subject = { id: `sub${subjects.length + 1}`, ...values };
-    setSubjects(prev => [...prev, newSubject]);
-    setIsAddSubjectDialogOpen(false);
-    toast({
-      title: "Subject Added!",
-      description: `${newSubject.name} has been added to your subjects.`,
+    const subjectsCollection = collection(db, 'users', user.uid, 'subjects');
+    const timetableCollection = collection(db, 'users', user.uid, 'timetable');
+    const q = query(timetableCollection, orderBy('startTime'));
+
+    const unsubSubjects = onSnapshot(subjectsCollection, (snapshot) => {
+        setSubjects(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Subject)));
+        setIsDataLoaded(true);
     });
+
+    const unsubTimetable = onSnapshot(q, (snapshot) => {
+        setTimetable(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TimetableEntry)));
+    });
+
+    return () => {
+        unsubSubjects();
+        unsubTimetable();
+    }
+  }, [user, db]);
+
+
+  const handleAddSubject = async (values: SubjectFormValues) => {
+     if (!user || !db) return;
+    try {
+        const subjectsCollection = collection(db, 'users', user.uid, 'subjects');
+        await addDoc(subjectsCollection, values);
+        setIsAddSubjectDialogOpen(false);
+        toast({
+            title: "Subject Added!",
+            description: `${values.name} has been added.`,
+        });
+    } catch (error) {
+        console.error("Error adding subject: ", error);
+        toast({ title: "Error", description: "Could not add subject.", variant: 'destructive' });
+    }
   };
 
-  const handleAddEntry = (values: TimetableFormValues) => {
-    const newEntry: TimetableEntry = {
-      id: `tt${timetable.length + 1}`,
-      ...values,
-    };
-    setTimetable(prev => [...prev, newEntry].sort((a,b) => (a.startTime ?? '').localeCompare(b.startTime ?? '')));
-    setIsAddEntryDialogOpen(false);
-    toast({
-      title: "Timetable Updated",
-      description: `Added class for ${values.day}.`,
-    });
+  const handleAddEntry = async (values: TimetableFormValues) => {
+     if (!user || !db) return;
+    try {
+        const timetableCollection = collection(db, 'users', user.uid, 'timetable');
+        await addDoc(timetableCollection, values);
+        setIsAddEntryDialogOpen(false);
+        toast({
+            title: "Timetable Updated",
+            description: `Added class for ${values.day}.`,
+        });
+    } catch (error) {
+        console.error("Error adding timetable entry: ", error);
+        toast({ title: "Error", description: "Could not add entry.", variant: 'destructive' });
+    }
   };
 
-  const handleDeleteEntry = (entryId: string) => {
-    setTimetable(prev => prev.filter(entry => entry.id !== entryId));
-     toast({
-      title: "Class Removed",
-      description: `The class has been removed from your timetable.`,
-      variant: 'destructive'
-    });
+  const handleDeleteEntry = async (entryId: string) => {
+    if (!user || !db) return;
+    try {
+        const entryRef = doc(db, 'users', user.uid, 'timetable', entryId);
+        await deleteDoc(entryRef);
+        toast({
+            title: "Class Removed",
+            description: `The class has been removed from your timetable.`,
+            variant: 'destructive'
+        });
+    } catch (error) {
+        console.error("Error deleting entry: ", error);
+        toast({ title: "Error", description: "Could not delete entry.", variant: 'destructive' });
+    }
   }
 
   const getSubjectById = (subjectId: string) => {
     return subjects.find(s => s.id === subjectId);
   }
   
-  if (!isDataLoaded) {
-    return <div>Loading your timetable...</div>
+  if (loading || (!isDataLoaded && !user)) {
+    return <div className="flex items-center justify-center h-screen">Loading your timetable...</div>
+  }
+  
+  if (!user) {
+    return <div className="flex items-center justify-center h-screen">Please log in to view your timetable.</div>;
   }
 
   return (
@@ -100,7 +141,6 @@ export default function TimetablePage() {
                         <CardContent className="space-y-3 flex-grow">
                             {timetable
                                 .filter(entry => entry.day === day)
-                                .sort((a,b) => (a.startTime ?? '').localeCompare(b.startTime ?? ''))
                                 .map(entry => {
                                     const subject = getSubjectById(entry.subjectId);
                                     return (
@@ -154,3 +194,4 @@ export default function TimetablePage() {
     </div>
   );
 }
+
