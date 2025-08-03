@@ -19,14 +19,10 @@ let app: FirebaseApp;
 let auth: Auth;
 let db: Firestore;
 
-// Function to initialize Firebase
-function initializeFirebase() {
-  const allConfigValuesPresent = Object.values(firebaseConfig).every(Boolean);
-  if (!allConfigValuesPresent) {
-    console.error("Firebase config is missing one or more values. App not initialized.");
-    return;
-  }
-  
+// Check if all Firebase config values are present before initializing
+const allConfigValuesPresent = Object.values(firebaseConfig).every(Boolean);
+
+if (allConfigValuesPresent) {
   if (getApps().length === 0) {
     app = initializeApp(firebaseConfig);
   } else {
@@ -34,9 +30,10 @@ function initializeFirebase() {
   }
   auth = getAuth(app);
   db = getFirestore(app);
+} else {
+  console.error("Firebase config is missing one or more values. App not initialized.");
+  // To prevent the app from crashing, we'll assign null to the exports
+  // when the config is not available. Your application logic should handle this.
 }
-
-// Call the function to initialize Firebase
-initializeFirebase();
 
 export { app, auth, db };
