@@ -3,19 +3,7 @@
 
 import { Button } from "@/components/ui/button";
 import { PlusCircle, BookOpen, LogOut, CalendarDays, LayoutDashboard } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { getFirebaseAuth } from "@/lib/firebase";
-import { signOut } from "firebase/auth";
 import { useRouter, usePathname } from "next/navigation";
-import { useAuth } from "@/context/auth-provider";
 
 type HeaderProps = {
   onAddSubject: () => void;
@@ -24,19 +12,7 @@ type HeaderProps = {
 export function Header({ onAddSubject }: HeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { user } = useAuth();
 
-  const handleLogout = async () => {
-    const auth = getFirebaseAuth();
-    if (!auth) return;
-    try {
-      await signOut(auth);
-      router.push('/');
-    } catch (error) {
-      console.error("Error signing out: ", error);
-    }
-  };
-  
   const isTimetablePage = pathname === '/dashboard/timetable';
 
   return (
@@ -80,22 +56,10 @@ export function Header({ onAddSubject }: HeaderProps) {
           <PlusCircle className="h-4 w-4" />
           <span className="sr-only">Add Subject</span>
         </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Avatar className="h-9 w-9 cursor-pointer">
-              <AvatarImage src={user?.photoURL ?? "https://placehold.co/100x100.png"} alt="User" data-ai-hint="user avatar" />
-              <AvatarFallback>{user?.displayName?.charAt(0) ?? 'U'}</AvatarFallback>
-            </Avatar>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>{user?.displayName ?? 'My Account'}</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
-              <LogOut className="mr-2 h-4 w-4" />
-              <span>Log out</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Button variant="outline" onClick={() => router.push('/')}>
+            <LogOut className="mr-2 h-4 w-4" />
+            <span>Log out</span>
+        </Button>
       </div>
     </header>
   );

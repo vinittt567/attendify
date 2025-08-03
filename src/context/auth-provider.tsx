@@ -1,54 +1,26 @@
 
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { getFirebaseAuth } from '@/lib/firebase';
-import { useRouter, usePathname } from 'next/navigation';
+import { createContext, useContext, ReactNode } from 'react';
+
+// A placeholder user type.
+type User = {
+  displayName: string;
+  photoURL: string;
+} | null;
 
 interface AuthContextType {
-  user: User | null;
+  user: User;
   loading: boolean;
 }
 
-const AuthContext = createContext<AuthContextType>({ user: null, loading: true });
+const AuthContext = createContext<AuthContextType>({ user: null, loading: false });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const router = useRouter();
-  const pathname = usePathname();
-
-  useEffect(() => {
-    const auth = getFirebaseAuth();
-    if (!auth) {
-        setLoading(false);
-        if (pathname !== '/') {
-            router.push('/');
-        }
-        return;
-    }
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [router, pathname]);
-
-  useEffect(() => {
-    if (!loading) {
-      if (user && pathname === '/') {
-        router.push('/dashboard');
-      } else if (!user && pathname !== '/') {
-        router.push('/');
-      }
-    }
-  }, [user, loading, router, pathname]);
-
-  if (loading) {
-    return <div>Loading...</div>;
-  }
+  // Since Firebase is removed, we'll provide a mock user or null.
+  // Set loading to false as there's no async auth check.
+  const user: User = null; 
+  const loading = false;
 
   return (
     <AuthContext.Provider value={{ user, loading }}>

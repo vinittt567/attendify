@@ -24,14 +24,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useAuth } from '@/context/auth-provider';
-import { getFirestoreDb } from '@/lib/firebase';
-import { collection, doc, getDocs, writeBatch, addDoc, deleteDoc, query, where, setDoc } from 'firebase/firestore';
+import { initialSubjects, initialTimetable } from '@/lib/mock-data';
 
 const DAYS_OF_WEEK: TimetableEntry['day'][] = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export default function Dashboard() {
-  const { user, loading: authLoading } = useAuth();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [timetable, setTimetable] = useState<TimetableEntry[]>([]);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
@@ -43,100 +40,40 @@ export default function Dashboard() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const { toast } = useToast();
 
-  const fetchData = useCallback(async (uid: string) => {
-    const db = getFirestoreDb();
-    if (!db) return;
-    try {
-      const subjectsCollection = collection(db, `users/${uid}/subjects`);
-      const subjectsSnapshot = await getDocs(subjectsCollection);
-      const fetchedSubjects = subjectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Subject));
-      setSubjects(fetchedSubjects);
-
-      const timetableSnapshot = await getDocs(collection(db, `users/${uid}/timetable`));
-      setTimetable(timetableSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TimetableEntry)));
-      
-      const attendanceSnapshot = await getDocs(query(collection(db, `users/${uid}/attendance`)));
-      setAttendance(attendanceSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendanceRecord)));
-
-    } catch (error) {
-      console.error("Error fetching data:", error);
-      if (error instanceof Error && 'code' in error && (error as any).code === 'failed-precondition') {
-         toast({ title: "Enable Firestore", description: "Please create a Firestore database in your Firebase project console to continue.", variant: 'destructive', duration: 10000 });
-      } else {
-         toast({ title: "Error", description: "Could not fetch your data. Please try again later.", variant: 'destructive', duration: 10000 });
-      }
-    } finally {
-      setIsDataLoaded(true);
-    }
-  }, [toast]);
-
   useEffect(() => {
-    if (user && !isDataLoaded) {
-      fetchData(user.uid);
-    } else if (!user && !authLoading) {
-      // If user is not logged in and auth is not loading, we can assume no data to load.
-      setIsDataLoaded(true);
-    }
-  }, [user, authLoading, isDataLoaded, fetchData]);
-
+    // Load mock data since Firebase is removed
+    setSubjects(initialSubjects);
+    setTimetable(initialTimetable);
+    setIsDataLoaded(true);
+  }, []);
 
   const handleAddSubject = async (values: SubjectFormValues) => {
-    const db = getFirestoreDb();
-    if (!user || !db) return;
-    try {
-      const newSubjectData = {
-        name: values.name,
-        shortCode: values.shortCode,
-        color: values.color
-      };
-      const docRef = await addDoc(collection(db, `users/${user.uid}/subjects`), newSubjectData);
-      const newSubject: Subject = {
-        id: docRef.id,
-        ...newSubjectData
-      };
-      setSubjects(prev => [...prev, newSubject]);
-      setIsAddSubjectDialogOpen(false);
-      toast({
-        title: "Subject Added!",
-        description: `${newSubject.name} has been added to your subjects.`,
-      });
-    } catch (error) {
-      console.error("Error adding subject:", error);
-      toast({ title: "Error", description: "Could not add subject.", variant: 'destructive' });
-    }
+    const newSubject: Subject = {
+      id: `sub${subjects.length + 1}`,
+      ...values
+    };
+    setSubjects(prev => [...prev, newSubject]);
+    setIsAddSubjectDialogOpen(false);
+    toast({
+      title: "Subject Added!",
+      description: `${newSubject.name} has been added to your subjects.`,
+    });
   };
   
   const handleSaveAttendance = async (records: Omit<AttendanceRecord, 'id'>[]) => {
-    const db = getFirestoreDb();
-    if (!user || !records.length || !db) return;
-    try {
-      const batch = writeBatch(db);
-      const date = records[0].date;
-      
-      const q = query(collection(db, `users/${user.uid}/attendance`), where('date', '==', date));
-      const querySnapshot = await getDocs(q);
-      
-      querySnapshot.forEach(doc => {
-          batch.delete(doc.ref);
-      });
+    if (!records.length) return;
+    const date = records[0].date;
+    
+    // Filter out old records for the same date and add new ones
+    setAttendance(prev => [
+      ...prev.filter(r => r.date !== date),
+      ...records.map((r, i) => ({...r, id: `att-${date}-${i}`}))
+    ]);
 
-      records.forEach(record => {
-        const docRef = doc(collection(db, `users/${user.uid}/attendance`));
-        batch.set(docRef, record);
-      });
-
-      await batch.commit();
-      
-      await fetchData(user.uid);
-
-      toast({
-        title: "Attendance Saved",
-        description: `Attendance for ${format(new Date(date), 'MMMM d, yyyy')} has been updated.`,
-      });
-    } catch (error) {
-       console.error("Error saving attendance:", error);
-       toast({ title: "Error", description: "Could not save attendance.", variant: 'destructive' });
-    }
+    toast({
+      title: "Attendance Saved",
+      description: `Attendance for ${format(new Date(date), 'MMMM d, yyyy')} has been updated.`,
+    });
   };
 
   const openDeleteDialog = (subjectId: string) => {
@@ -148,41 +85,20 @@ export default function Dashboard() {
   };
 
   const confirmDeleteSubject = async () => {
-    const db = getFirestoreDb();
-    if (!subjectToDelete || !user || !db) return;
+    if (!subjectToDelete) return;
     
-    try {
-        const batch = writeBatch(db);
+    setSubjects(prev => prev.filter(s => s.id !== subjectToDelete.id));
+    setTimetable(prev => prev.filter(t => t.subjectId !== subjectToDelete.id));
+    setAttendance(prev => prev.filter(a => a.subjectId !== subjectToDelete.id));
+  
+    toast({
+        title: "Subject Deleted",
+        description: `${subjectToDelete.name} and all its records have been removed.`,
+        variant: 'destructive',
+    });
 
-        const subjectRef = doc(db, `users/${user.uid}/subjects`, subjectToDelete.id);
-        batch.delete(subjectRef);
-
-        const ttQuery = query(collection(db, `users/${user.uid}/timetable`), where('subjectId', '==', subjectToDelete.id));
-        const ttSnapshot = await getDocs(ttQuery);
-        ttSnapshot.forEach(doc => batch.delete(doc.ref));
-
-        const attQuery = query(collection(db, `users/${user.uid}/attendance`), where('subjectId', '==', subjectToDelete.id));
-        const attSnapshot = await getDocs(attQuery);
-        attSnapshot.forEach(doc => batch.delete(doc.ref));
-
-        await batch.commit();
-
-        setSubjects(prev => prev.filter(s => s.id !== subjectToDelete.id));
-        setTimetable(prev => prev.filter(t => t.subjectId !== subjectToDelete.id));
-        setAttendance(prev => prev.filter(a => a.subjectId !== subjectToDelete.id));
-      
-        toast({
-            title: "Subject Deleted",
-            description: `${subjectToDelete.name} and all its records have been removed.`,
-            variant: 'destructive',
-        });
-    } catch (error) {
-        console.error("Error deleting subject:", error);
-        toast({ title: "Error", description: "Could not delete subject.", variant: 'destructive' });
-    } finally {
-        setSubjectToDelete(null);
-        setIsDeleteDialogOpen(false);
-    }
+    setSubjectToDelete(null);
+    setIsDeleteDialogOpen(false);
   };
   
   const attendanceForSelectedDay = useMemo(() => {
@@ -241,7 +157,7 @@ export default function Dashboard() {
     setIsMarkerDialogOpen(true);
   }
   
-  if (authLoading || !isDataLoaded) {
+  if (!isDataLoaded) {
     return <div className="flex items-center justify-center h-screen">Loading your personalized dashboard...</div>
   }
 

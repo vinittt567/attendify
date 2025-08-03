@@ -2,64 +2,9 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useToast } from '@/hooks/use-toast';
-import { getFirebaseAuth } from '@/lib/firebase';
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { useAuth } from '@/context/auth-provider';
-import { useEffect } from 'react';
-
-const GoogleIcon = () => (
-    <svg 
-      xmlns="http://www.w3.org/2000/svg" 
-      width="24px" 
-      height="24px" 
-      fill="currentColor" 
-      viewBox="0 0 256 256"
-    >
-      <path d="M224,128a96,96,0,1,1-21.95-61.09,8,8,0,1,1-12.33,10.18A80,80,0,1,0,207.6,136H128a8,8,0,0,1,0-16h88A8,8,0,0,1,224,128Z"></path>
-    </svg>
-);
 
 export default function LoginPage() {
-  const { toast } = useToast();
-  const { user, loading } = useAuth();
   const router = useRouter();
-
-  const handleSignIn = async () => {
-    const auth = getFirebaseAuth();
-    if (!auth) {
-        toast({
-            title: "Configuration Error",
-            description: "Firebase is not configured. Please contact support.",
-            variant: "destructive",
-        });
-        return;
-    }
-    const provider = new GoogleAuthProvider();
-    try {
-      await signInWithPopup(auth, provider);
-      // The auth provider will handle the redirect to /dashboard
-    } catch (error: any) {
-      if (error.code === 'auth/popup-closed-by-user') {
-        return;
-      }
-      
-      console.error("Authentication error:", error);
-      toast({
-        title: "Uh Oh! Something went wrong.",
-        description: "There was a problem with your request.",
-        variant: "destructive",
-      });
-    }
-  };
-  
-  if (loading || user) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        Loading...
-      </div>
-    );
-  }
 
   return (
     <div
@@ -97,7 +42,7 @@ export default function LoginPage() {
                 <div className="text-3xl">📊</div>
                 <div>
                     <h4 className="font-bold text-lg text-slate-800">View Attendance Stats</h4>
-                    <p className="text-slate-600 mt-1">Get insightful AI-powered summaries and statistics for each of your subjects.</p>
+                    <p className="text-slate-600 mt-1">Get insightful summaries and statistics for each of your subjects.</p>
                 </div>
                 </div>
             </div>
@@ -107,12 +52,9 @@ export default function LoginPage() {
         <div className="flex px-4 py-3 justify-center">
           <button
             className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-12 px-5 bg-[#e7edf3] text-[#0e141b] gap-2 pl-5 text-base font-bold leading-normal tracking-[0.015em] shadow-md hover:shadow-lg transition-shadow"
-            onClick={handleSignIn}
+            onClick={() => router.push('/dashboard')}
           >
-            <div className="text-[#0e141b]">
-              <GoogleIcon />
-            </div>
-            <span className="truncate">Sign in with Google</span>
+            <span>Continue to Dashboard</span>
           </button>
         </div>
         <div className="h-5"></div>

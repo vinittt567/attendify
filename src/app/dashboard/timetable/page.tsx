@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PlusCircle, Trash2 } from 'lucide-react';
@@ -11,14 +11,11 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Header } from '@/components/dashboard/header'; 
 import { AddSubjectDialog, SubjectFormValues } from '@/components/dashboard/add-subject-dialog';
-import { useAuth } from '@/context/auth-provider';
-import { getFirestoreDb } from '@/lib/firebase';
-import { collection, query, getDocs, addDoc, deleteDoc, doc } from 'firebase/firestore';
+import { initialSubjects, initialTimetable } from '@/lib/mock-data';
 
 const DAYS_OF_WEEK: TimetableEntry['day'][] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 export default function TimetablePage() {
-  const { user, loading: authLoading } = useAuth();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [timetable, setTimetable] = useState<TimetableEntry[]>([]);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
@@ -26,98 +23,50 @@ export default function TimetablePage() {
   const [isAddSubjectDialogOpen, setIsAddSubjectDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  const fetchData = useCallback(async () => {
-    const db = getFirestoreDb();
-    if (!user || !db) return;
-    try {
-      const subjectsQuery = query(collection(db, `users/${user.uid}/subjects`));
-      const timetableQuery = query(collection(db, `users/${user.uid}/timetable`));
-      
-      const [subjectsSnapshot, timetableSnapshot] = await Promise.all([
-        getDocs(subjectsQuery),
-        getDocs(timetableQuery),
-      ]);
-      
-      setSubjects(subjectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Subject)));
-      setTimetable(timetableSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TimetableEntry)));
-
-    } catch (error) {
-      console.error("Error fetching data:", error);
-      toast({ title: "Error", description: "Could not fetch your data.", variant: 'destructive' });
-    } finally {
-      setIsDataLoaded(true);
-    }
-  }, [user, toast]);
-
   useEffect(() => {
-    if(user && !isDataLoaded) {
-      fetchData();
-    } else if (!user && !authLoading) {
-      setIsDataLoaded(true);
-    }
-  }, [user, authLoading, isDataLoaded, fetchData]);
+    // Load mock data since Firebase is removed
+    setSubjects(initialSubjects);
+    setTimetable(initialTimetable);
+    setIsDataLoaded(true);
+  }, []);
 
-  const handleAddSubject = async (values: SubjectFormValues) => {
-    const db = getFirestoreDb();
-    if (!user || !db) return;
-    try {
-      const docRef = await addDoc(collection(db, `users/${user.uid}/subjects`), values);
-      const newSubject: Subject = { id: docRef.id, ...values };
-      setSubjects(prev => [...prev, newSubject]);
-      setIsAddSubjectDialogOpen(false);
-      toast({
-        title: "Subject Added!",
-        description: `${newSubject.name} has been added to your subjects.`,
-      });
-    } catch (error) {
-      console.error("Error adding subject:", error);
-      toast({ title: "Error", description: "Could not add subject.", variant: 'destructive' });
-    }
+  const handleAddSubject = (values: SubjectFormValues) => {
+    const newSubject: Subject = { id: `sub${subjects.length + 1}`, ...values };
+    setSubjects(prev => [...prev, newSubject]);
+    setIsAddSubjectDialogOpen(false);
+    toast({
+      title: "Subject Added!",
+      description: `${newSubject.name} has been added to your subjects.`,
+    });
   };
 
-  const handleAddEntry = async (values: TimetableFormValues) => {
-    const db = getFirestoreDb();
-    if (!user || !db) return;
-    try {
-      const docRef = await addDoc(collection(db, `users/${user.uid}/timetable`), values);
-      const newEntry: TimetableEntry = {
-        id: docRef.id,
-        ...values,
-      };
-      setTimetable(prev => [...prev, newEntry].sort((a,b) => (a.startTime ?? '').localeCompare(b.startTime ?? '')));
-      setIsAddEntryDialogOpen(false);
-      toast({
-        title: "Timetable Updated",
-        description: `Added class for ${values.day}.`,
-      });
-    } catch (error) {
-      console.error("Error adding timetable entry:", error);
-      toast({ title: "Error", description: "Could not add timetable entry.", variant: 'destructive' });
-    }
+  const handleAddEntry = (values: TimetableFormValues) => {
+    const newEntry: TimetableEntry = {
+      id: `tt${timetable.length + 1}`,
+      ...values,
+    };
+    setTimetable(prev => [...prev, newEntry].sort((a,b) => (a.startTime ?? '').localeCompare(b.startTime ?? '')));
+    setIsAddEntryDialogOpen(false);
+    toast({
+      title: "Timetable Updated",
+      description: `Added class for ${values.day}.`,
+    });
   };
 
-  const handleDeleteEntry = async (entryId: string) => {
-    const db = getFirestoreDb();
-    if (!user || !db) return;
-    try {
-      await deleteDoc(doc(db, `users/${user.uid}/timetable`, entryId));
-      setTimetable(prev => prev.filter(entry => entry.id !== entryId));
-       toast({
-        title: "Class Removed",
-        description: `The class has been removed from your timetable.`,
-        variant: 'destructive'
-      });
-    } catch (error) {
-      console.error("Error deleting timetable entry:", error);
-      toast({ title: "Error", description: "Could not delete timetable entry.", variant: 'destructive' });
-    }
+  const handleDeleteEntry = (entryId: string) => {
+    setTimetable(prev => prev.filter(entry => entry.id !== entryId));
+     toast({
+      title: "Class Removed",
+      description: `The class has been removed from your timetable.`,
+      variant: 'destructive'
+    });
   }
 
   const getSubjectById = (subjectId: string) => {
     return subjects.find(s => s.id === subjectId);
   }
   
-  if (authLoading || !isDataLoaded) {
+  if (!isDataLoaded) {
     return <div>Loading your timetable...</div>
   }
 
