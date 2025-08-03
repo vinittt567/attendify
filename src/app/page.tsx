@@ -45,25 +45,28 @@ export default function LoginPage() {
   };
   
   if (loading || user) {
-    return <div>Loading...</div>; // Or a proper loading spinner
+    return (
+      <div className="flex items-center justify-center h-screen">
+        Loading...
+      </div>
+    );
   }
 
   return (
     <div
       className="relative flex size-full min-h-screen flex-col justify-between group/design-root overflow-x-hidden"
       style={{
-        fontFamily: 'Manrope, "Noto Sans", sans-serif',
         background: 'linear-gradient(135deg, hsl(var(--secondary)) 0%, hsl(var(--primary)) 100%)',
       }}
     >
       <div>
         <div className="flex items-center p-4 pb-2 justify-between">
-          <h2 className="text-[#0e141b] text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center pl-12 pr-12">
-            Attendance Tracker
+          <h2 className="font-headline text-[#0e141b] text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center pl-12 pr-12">
+            Attendify
           </h2>
         </div>
-        <h3 className="text-[#0e141b] tracking-light text-2xl font-bold leading-tight px-4 text-center pb-2 pt-5">
-          Welcome to Attendance Tracker
+        <h3 className="font-headline text-[#0e141b] tracking-light text-2xl font-bold leading-tight px-4 text-center pb-2 pt-5">
+          Welcome to Attendify
         </h3>
         <div className="p-4 sm:p-8">
             <div className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-lg p-8 space-y-8 border">

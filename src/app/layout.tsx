@@ -17,13 +17,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="preconnect" href="https://fonts.gstatic.com/" crossOrigin="" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
+          href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700;900&family=PT+Sans:wght@400;700&display=swap"
           rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?display=swap&family=Manrope:wght@400;500;700;800&family=Noto+Sans:wght@400;500;700;900"
         />
       </head>
-      <body>
+      <body className="font-body">
         <AuthProvider>
           {children}
           <Toaster />

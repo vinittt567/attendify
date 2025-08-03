@@ -5,13 +5,12 @@ import { getFirestore } from "firebase/firestore";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  "projectId": "attendify-dv4c8",
-  "appId": "1:769171752484:web:0fcbb6a1a05f5530b9fab1",
-  "storageBucket": "attendify-dv4c8.firebasestorage.app",
-  "apiKey": "AIzaSyChuV-xIQtmZk80bfvrx4rOF4FxUV_ev1o",
-  "authDomain": "attendify-dv4c8.firebaseapp.com",
-  "measurementId": "",
-  "messagingSenderId": "769171752484"
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
 };
 
 // Initialize Firebase
