@@ -1,0 +1,42 @@
+# Specifies the version of the App Hosting platform
+version: 1
+
+# Specifies the region to run the App Hosting backend in
+run:
+  region: us-central1
+
+# Specifies the build command for the application
+build:
+  # The command that builds the application
+  command: 'npm run build'
+
+# Specifies the command that starts the application
+start:
+  command: 'npm run start'
+
+# Specifies the environment variables needed for the application
+env:
+  - variable: NEXT_PUBLIC_FIREBASE_API_KEY
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_APP_ID
+    availability:
+      - BUILD
+      - RUNTIME
