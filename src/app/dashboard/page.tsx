@@ -25,7 +25,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useAuth } from '@/context/auth-provider';
-import { db } from '@/lib/firebase';
+import { getFirestoreDb } from '@/lib/firebase';
 import { collection, doc, getDocs, writeBatch, addDoc, deleteDoc, query, where, setDoc } from 'firebase/firestore';
 
 const DAYS_OF_WEEK: TimetableEntry['day'][] = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -44,6 +44,8 @@ export default function Dashboard() {
   const { toast } = useToast();
 
   const fetchData = useCallback(async (uid: string) => {
+    const db = getFirestoreDb();
+    if (!db) return;
     try {
       const subjectsCollection = collection(db, `users/${uid}/subjects`);
       const subjectsSnapshot = await getDocs(subjectsCollection);
@@ -71,12 +73,16 @@ export default function Dashboard() {
   useEffect(() => {
     if (user && !isDataLoaded) {
       fetchData(user.uid);
+    } else if (!user && !authLoading) {
+      // If user is not logged in and auth is not loading, we can assume no data to load.
+      setIsDataLoaded(true);
     }
-  }, [user, isDataLoaded, fetchData]);
+  }, [user, authLoading, isDataLoaded, fetchData]);
 
 
   const handleAddSubject = async (values: SubjectFormValues) => {
-    if (!user) return;
+    const db = getFirestoreDb();
+    if (!user || !db) return;
     try {
       const newSubjectData = {
         name: values.name,
@@ -101,7 +107,8 @@ export default function Dashboard() {
   };
   
   const handleSaveAttendance = async (records: Omit<AttendanceRecord, 'id'>[]) => {
-    if (!user || !records.length) return;
+    const db = getFirestoreDb();
+    if (!user || !records.length || !db) return;
     try {
       const batch = writeBatch(db);
       const date = records[0].date;
@@ -141,7 +148,8 @@ export default function Dashboard() {
   };
 
   const confirmDeleteSubject = async () => {
-    if (!subjectToDelete || !user) return;
+    const db = getFirestoreDb();
+    if (!subjectToDelete || !user || !db) return;
     
     try {
         const batch = writeBatch(db);

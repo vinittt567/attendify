@@ -3,7 +3,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { auth } from '@/lib/firebase';
+import { getFirebaseAuth } from '@/lib/firebase';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { useAuth } from '@/context/auth-provider';
 import { useEffect } from 'react';
@@ -26,6 +26,15 @@ export default function LoginPage() {
   const router = useRouter();
 
   const handleSignIn = async () => {
+    const auth = getFirebaseAuth();
+    if (!auth) {
+        toast({
+            title: "Configuration Error",
+            description: "Firebase is not configured. Please contact support.",
+            variant: "destructive",
+        });
+        return;
+    }
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);

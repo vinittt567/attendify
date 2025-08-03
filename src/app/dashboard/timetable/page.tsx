@@ -12,13 +12,13 @@ import { cn } from '@/lib/utils';
 import { Header } from '@/components/dashboard/header'; 
 import { AddSubjectDialog, SubjectFormValues } from '@/components/dashboard/add-subject-dialog';
 import { useAuth } from '@/context/auth-provider';
-import { db } from '@/lib/firebase';
+import { getFirestoreDb } from '@/lib/firebase';
 import { collection, query, getDocs, addDoc, deleteDoc, doc } from 'firebase/firestore';
 
 const DAYS_OF_WEEK: TimetableEntry['day'][] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 export default function TimetablePage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [timetable, setTimetable] = useState<TimetableEntry[]>([]);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
@@ -27,7 +27,8 @@ export default function TimetablePage() {
   const { toast } = useToast();
 
   const fetchData = useCallback(async () => {
-    if (!user) return;
+    const db = getFirestoreDb();
+    if (!user || !db) return;
     try {
       const subjectsQuery = query(collection(db, `users/${user.uid}/subjects`));
       const timetableQuery = query(collection(db, `users/${user.uid}/timetable`));
@@ -51,11 +52,14 @@ export default function TimetablePage() {
   useEffect(() => {
     if(user && !isDataLoaded) {
       fetchData();
+    } else if (!user && !authLoading) {
+      setIsDataLoaded(true);
     }
-  }, [user, isDataLoaded, fetchData]);
+  }, [user, authLoading, isDataLoaded, fetchData]);
 
   const handleAddSubject = async (values: SubjectFormValues) => {
-    if (!user) return;
+    const db = getFirestoreDb();
+    if (!user || !db) return;
     try {
       const docRef = await addDoc(collection(db, `users/${user.uid}/subjects`), values);
       const newSubject: Subject = { id: docRef.id, ...values };
@@ -72,7 +76,8 @@ export default function TimetablePage() {
   };
 
   const handleAddEntry = async (values: TimetableFormValues) => {
-    if (!user) return;
+    const db = getFirestoreDb();
+    if (!user || !db) return;
     try {
       const docRef = await addDoc(collection(db, `users/${user.uid}/timetable`), values);
       const newEntry: TimetableEntry = {
@@ -92,7 +97,8 @@ export default function TimetablePage() {
   };
 
   const handleDeleteEntry = async (entryId: string) => {
-    if (!user) return;
+    const db = getFirestoreDb();
+    if (!user || !db) return;
     try {
       await deleteDoc(doc(db, `users/${user.uid}/timetable`, entryId));
       setTimetable(prev => prev.filter(entry => entry.id !== entryId));
@@ -111,7 +117,7 @@ export default function TimetablePage() {
     return subjects.find(s => s.id === subjectId);
   }
   
-  if (!isDataLoaded) {
+  if (authLoading || !isDataLoaded) {
     return <div>Loading your timetable...</div>
   }
 

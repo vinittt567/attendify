@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { auth } from "@/lib/firebase";
+import { getFirebaseAuth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/context/auth-provider";
@@ -27,6 +27,8 @@ export function Header({ onAddSubject }: HeaderProps) {
   const { user } = useAuth();
 
   const handleLogout = async () => {
+    const auth = getFirebaseAuth();
+    if (!auth) return;
     try {
       await signOut(auth);
       router.push('/');

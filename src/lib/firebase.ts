@@ -1,10 +1,10 @@
 
-// Import the functions you need from the SDKs you need
+'use client';
+
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
 import { getAuth, Auth } from "firebase/auth";
 import { getFirestore, Firestore } from "firebase/firestore";
 
-// Your web app's Firebase configuration
 const firebaseConfig = {
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
@@ -14,26 +14,26 @@ const firebaseConfig = {
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
 };
 
-// Initialize Firebase
 let app: FirebaseApp;
-let auth: Auth;
-let db: Firestore;
-
-// Check if all Firebase config values are present before initializing
 const allConfigValuesPresent = Object.values(firebaseConfig).every(Boolean);
 
 if (allConfigValuesPresent) {
-  if (getApps().length === 0) {
-    app = initializeApp(firebaseConfig);
-  } else {
-    app = getApp();
-  }
-  auth = getAuth(app);
-  db = getFirestore(app);
+    app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 } else {
-  console.error("Firebase config is missing one or more values. App not initialized.");
-  // To prevent the app from crashing, we'll assign null to the exports
-  // when the config is not available. Your application logic should handle this.
+    console.warn("Firebase config is missing one or more values. Firebase features will be unavailable.");
 }
 
-export { app, auth, db };
+function getFirebaseAuth(): Auth | null {
+    if (!allConfigValuesPresent) return null;
+    return getAuth(app);
+}
+
+function getFirestoreDb(): Firestore | null {
+    if (!allConfigValuesPresent) return null;
+    return getFirestore(app);
+}
+
+const auth = getFirebaseAuth();
+const db = getFirestoreDb();
+
+export { app, auth, db, getFirebaseAuth, getFirestoreDb };
