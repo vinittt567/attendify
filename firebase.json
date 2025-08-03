@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "source": ".",
+    "public": "public",
     "ignore": [
       "firebase.json",
       "**/.*",
@@ -9,10 +9,7 @@
     "rewrites": [
       {
         "source": "**",
-        "apphosting": {
-          "backendId": "nextn",
-          "region": "us-central1"
-        }
+        "destination": "/index.html"
       }
     ]
   }
